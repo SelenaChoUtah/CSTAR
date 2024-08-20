@@ -25,7 +25,7 @@ normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '.
 subjectnum = normativeFolder(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
         'SelectionMode','multiple','ListString',{normativeFolder.name}));
 
-for ss = 1%:length(subjectnum)
+for ss = 1:length(subjectnum)
     disp(append("Subject ", subjectnum(ss).name))
     clearvars subject reorient sortData
     % try

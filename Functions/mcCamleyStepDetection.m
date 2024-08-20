@@ -1,0 +1,114 @@
+function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
+%UNTITLED7 Summary of this function goes here
+%   Detailed explanation goes here
+
+    % McCamley, J., Donati, M., Grimpampi, E., & Mazzà, C. (2012).
+    % An enhanced estimate of initial contact and final contact instants of time using
+    % lower trunk inertial sensor data. Gait & posture, 36(2), 316-318.
+
+    fs = 100;
+    duration = length(vertAcceleration) / fs; % Total number of samples divided by the sampling frequency
+    time = linspace(0, duration, length(vertAcceleration));
+
+    % Adjust drift 
+    accV = vertAcceleration-mean(vertAcceleration);
+
+    % Integrating    
+    accVI = cumtrapz(time,accV);
+
+    % Differentiate by Gaussian CWT
+    accVICWT=cwt(accVI,12,'gaus2',1/fs);
+    accVICWT = accVICWT - mean(accVICWT);
+
+
+    % Variables initialization
+    LocPer = 0; % Counter of locomotion periods
+    StepCountLocPer = 0; % Counter of steps belonging to the locomotion period
+    LocFlag = 0; % Flag signaling the start/end of locomotion period
+
+    % Threshold for peak selection
+    mph = 0.02; % g
+    mpd = 30; % 0.3s apart
+
+    % Peak selection
+    [~,peaks] = findpeaks(-accVICWT, 'MinPeakHeight',mph,'MinPeakDistance',mpd,MinPeakProminence=0.05);
+
+    % Initialize step count variables
+    stepCount = 0;
+    stepPerBout = [];
+    StepCountLocPer = [];
+    maxStepDuration = 2; % 30 steps/min, Duration(s) = 60/Cadence
+    minStepDuration = 0.33; % 180 steps/min
+    begin = [];
+
+    try
+    % Loop thru all potential steps
+    for p = 1:length(peaks)-1 %511902:11960
+        % Duration between successive peaks
+            % Duration btw peaks (sec)
+            delta_t = (peaks(p+1) - peaks(p))/100; 
+            if delta_t < maxStepDuration && delta_t > minStepDuration
+                 if LocFlag == 0 % Initialize Locomotion period
+                    LocPer = LocPer + 1;
+                    LocFlag = 1;
+                    StepCountLocPer = StepCountLocPer + 1;
+                    start = peaks(p+1);
+                 else
+                    % Continue counting steps
+                    StepCountLocPer = StepCountLocPer + 1;                  
+                 end
+            else
+                % End of Locomotion period
+                if StepCountLocPer > 10
+                    begin = [begin;start, peaks(p)];
+                    LocFlag = 0;
+                    % Reset step counter
+                    stepPerBout = [stepPerBout;StepCountLocPer];
+                    stepCount = stepCount+StepCountLocPer;
+                    StepCountLocPer = 0;                    
+                else                      
+                    StepCountLocPer = 0;
+                    LocFlag = 0;
+                end                
+            end     
+    end   
+    stepInfo.stepCount = stepCount;
+    stepInfo.meanStepBout = round(mean(stepPerBout));
+    stepInfo.stepPerBout = stepPerBout;
+
+    %%
+    largerBouts = 20;%mean(stepPerBout);
+    largerBoutsIdx = find(stepPerBout>largerBouts);
+    calibrateWindow = [begin(1,:); begin(largerBoutsIdx,:);begin(end,:)];
+    fullWindow = zeros(length(largerBoutsIdx),2);
+    for i = 1:length(calibrateWindow)        
+        if i == 1
+            % data before the first walking
+            fullWindow(i,:) = [1, calibrateWindow(i,2)];        
+        elseif i == length(calibrateWindow)
+            % apply calibration to the last part of data 
+            fullWindow(i,:) = [calibrateWindow(i-1,2)+1, length(accVICWT)];
+        else
+            fullWindow(i,:) = [calibrateWindow(i-1,2)+1, calibrateWindow(i,2)];
+        end
+    end
+    
+    calibrate.fullWindow = fullWindow;
+    calibrate.calibrateWindow = calibrateWindow;
+    catch 
+        disp("No step counts detected")
+        calibrate.fullWindow = [];
+        calibrate.calibrateWindow = [];
+    end
+
+
+    %%
+
+    % figure
+    % plot(accVICWT)
+    % hold on
+    % plot(peaks,accVICWT(peaks),'*')
+    % plot(begin(:,1),accVICWT(begin(:,1)),'^')
+    % plot(begin(:,2),accVICWT(begin(:,2)),'o')
+
+end
