@@ -30,6 +30,82 @@ for i = 1:numel(subjectnum)
 
 end
 
+%% Wear time 
+
+wearTimeHours = [];
+id = fieldnames(data);
+for i = 1:length(id)
+    dayNum = fieldnames(data.(id{i}).turnData);
+    hoursPerSub = [];
+    for d = 1:length(dayNum)
+        sensor = "head";
+        hoursPerSub(d) = data.(id{i}).timeData.(dayNum{d}).head.wearTime;
+    end
+    wearTimeHours(i) = round(mean(hoursPerSub));
+end
+
+%%
+close all
+figure
+h = histogram(round(wearTimeHours),8,'BinWidth',4)
+ylim([0 10])
+xlim([0 25])
+ylabel("Number of Subjects")
+xlabel("Number of Subjects")
+saveas(gcf,'numberofhours','emf')
+
+%% Plot 3d Histogram
+
+close all
+figure
+hist3([data.S16.turnData.day3.head.amplitude data.S16.turnData.day3.head.angVelocity],'CDataMode','auto','Ctrs',{10:20:200 10:20:200},'FaceColor','interp')
+grid off
+xlabel('Amplitude')
+ylabel('Angular Velocity')
+zlabel('Number of Turns (n)')
+saveas(gcf,'3dHistogram','emf')
+
+%% Turns per hour
+allTurnPerHour = [];
+turnPerHour = [];
+id = fieldnames(data);
+for i = 1:length(id)
+    dayNum = fieldnames(data.(id{i}).turnData);
+    for d = 1:length(dayNum)
+        try
+        sensor = fieldnames(data.(id{i}).turnData.(dayNum{d}));
+        % for s = 1:length(sensor)
+        interval = linspace(1,data.(id{i}).timeData.(dayNum{d}).head.dayLength,25);
+        numOfTurns = data.(id{i}).turnData.(dayNum{d}).head.startstop(:,1);
+        for j = 1:length(interval) - 1
+            % Count how many numOfTurns fall within the interval [interval(j), interval(j+1)]
+            turnPerHour(j,d) = length(find(numOfTurns >= interval(j) & numOfTurns < interval(j+1)));
+        end
+        % end
+        catch
+            disp("No head sensor")
+        end
+    end
+    allTurnPerHour = [allTurnPerHour,mean(turnPerHour,2)];
+end
+
+%% Weartime 
+
+j = 1;
+id = fieldnames(data);
+for i = 1:length(id)    
+    try
+    dayNum = fieldnames(data.(id{i}).turnData);
+    for d = 1:length(dayNum)
+        numOfHours(d) = data.(id{i}).timeData.(dayNum{d}).head.nonwearTime;
+    end
+    averageNonWearTime(j) = mean(numOfHours);
+    j = j+1;
+    catch
+    end
+end
+
+
 %% Turn Descriptive Statistics
 
 turnMetric = {'amplitude', 'angVelocity','turnDuration'};
@@ -42,13 +118,24 @@ for i = 1:length(id)
             for t = 1:length(turnMetric)
                 turn.dailyAverage.(sensor{s}).(turnMetric{t}){d,i} = mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
                 turn.dailyStDev.(sensor{s}).(turnMetric{t}){d,i} = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
-                turn.dailyNumber.(sensor{s}).(turnMetric{t}){d,i} = length(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
+                turn.dailyNumber.(sensor{s})(d,i) = length(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
                 turn.dailyCV.(sensor{s}).(turnMetric{t}){d,i} = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}))/mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
                 
             end
         end
     end
 end
+
+%% Average number of head turns
+
+j = 1;
+id = fieldnames(data);
+for i = 1:length(id)    
+    numOfHeadTurn(i) = mean(turn.dailyNumber.head(:,i));   
+end
+
+mean(numOfHeadTurn)
+std(numOfHeadTurn)
 
 %%
 

@@ -47,9 +47,9 @@ for t = 1:length(task)
 end
 
 %% Looping through diff day averages
-
+close all
 % task = {'amplitude','angVelocity','number'};
-taskName = 'angVelocity';
+taskName = 'number';
 fullData =  mean(compData.(taskName),2);
 for i = 1:5
     partialData =  mean(compData.(taskName)(:,1:i),2);
@@ -65,51 +65,35 @@ for i = 1:5
     % SDD(i) = 1.96 * std(difference) / mean(meanActivity) * 100; % SDD as a percentage of the mean
 end
 
-% disp(["ICC: " ICC])
-% disp(["SDD: " SDD])
+figure
+plot(r)
+ylim([0 1.2])
+yline(0.7,'--')
+title(taskName)
+xlabel('days')
+ylabel('ICC')
+saveas(gcf,append(taskName,'_icc'),'emf')
 
-%% For loop for ICC
+%% Turns per hour ICC
+close all
 
+% task = {'amplitude','angVelocity','number'};
+turnPerHour = mean(allTurnPerHour,2);
+fullData = mean(turnPerHour);
+taskName = 'turnsPerHour';
 
-function quantifyPhysicalActivity(reliabilityData1, reliabilityData2, numDays)
-
-    % Input arguments:
-    % reliabilityData1: NxM matrix where N is the number of days (e.g., 6) and M is the number of subjects/participants for the first measurement period.
-    % reliabilityData2: 1xM matrix containing the six-day average of the second measurement period.
-    % numDays: Integer representing the number of days (1 to 6) to be analyzed.
-    
-    
-    ICC_values = zeros(1, numDays); 
-    SDD_values = zeros(1, numDays); 
-    
-    for d = 1:numDays
-        day_combinations = nchoosek(1:6, d); % Generate all combinations of 'd' days from 6 days
-        num_combinations = size(day_combinations, 1);
-        ICC_comb = zeros(num_combinations, 1);
-        SDD_comb = zeros(num_combinations, 1);
-
-        % Loop over all combinations
-        for c = 1:num_combinations
-            selectedDays = day_combinations(c, :);
-            avg_activity1 = mean(reliabilityData1(selectedDays, :), 1); % Average of selected days in period 1
-
-            % Compute ICC(2,1)
-            ICC_comb(c) = computeICC(avg_activity1, reliabilityData2, '2.1');
-
-            % Compute SDD (% of the mean)
-            meanActivity = mean([avg_activity1, reliabilityData2]);
-            difference = abs(avg_activity1 - reliabilityData2);
-            SDD_comb(c) = 1.96 * std(difference) / mean(meanActivity) * 100; % SDD as a percentage of the mean
-        end
-        
-        % Take the mean ICC and SDD across all combinations for each day count
-        ICC_values(d) = mean(ICC_comb);
-        SDD_values(d) = mean(SDD_comb);
-    end
-    
-    % Display Results
-    disp('Number of Days vs. ICC and SDD:')
-    for d = 1:numDays
-        fprintf('Days: %d | ICC: %.3f | SDD: %.2f%%\n', d, ICC_values(d), SDD_values(d));
-    end
+for i = 1:24
+    partialData =  mean(turnPerHour(1:i));
+    compareData = [partialData,fullData]
+    [r(i), LB(i), UB(i),~,~,~] = ICC(compareData, 'A-k');
 end
+
+figure
+plot(r)
+ylim([0 1.2])
+yline(0.7,'--')
+title(taskName)
+xlabel('days')
+ylabel('ICC')
+saveas(gcf,append(taskName,'_icc'),'emf')
+

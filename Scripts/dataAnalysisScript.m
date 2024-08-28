@@ -31,7 +31,7 @@ for i = 1:numel(subjectnum)
                 [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration);
                 stepData.(daynum{j}).(sensor{s}) = stepInfo;
                 calibrateData.(daynum{j}).(sensor{s}) = calibrate;
-                saveData.stepData.(daynum{j}).(sensor{s}) = stepInfo;  
+                saveData.stepData.(daynum{j}).(sensor{s}) = stepInfo;                  
             end
         end
 
@@ -42,9 +42,10 @@ for i = 1:numel(subjectnum)
             sensor = fieldnames(data.(id).(daynum{j}));
             for s = 1:length(sensor)
                 try 
-                vertAcc = data.(id).(daynum{j}).(sensor{s}).acc;
-                wearTime = wornTime(vertAcc);
-                saveData.timeData.(daynum{j}).(sensor{s}) = wearTime;  
+                vertAcc = data.(id).(daynum{j}).(sensor{s}).acc;                
+                wearTimeStruct = wearTime(vertAcc,100);
+                saveData.timeData.(daynum{j}).(sensor{s}) = wearTimeStruct;  
+                saveData.timeData.(daynum{j}).(sensor{s}).dayLength = length(vertAcc);
 
                 fullWindow = calibrateData.(daynum{j}).(sensor{s}).fullWindow;
                 calibrateWindow = calibrateData.(daynum{j}).(sensor{s}).calibrateWindow;
@@ -102,7 +103,6 @@ for i = 1:numel(subjectnum)
             catch
                 disp(append("Day did not work ",daynum{j}))
             end
-
         end        
         
         % Save 
@@ -122,4 +122,12 @@ for i = 1:numel(subjectnum)
     end
 end
 
-
+%%
+clc
+figure
+for d = 1:length(daynum)
+    nexttile
+    plot(saveData.timeData.(daynum{d}).head.activityCounts)
+    title(num2str(d))
+    disp(saveData.timeData.(daynum{d}).head.nonwearTime)
+end

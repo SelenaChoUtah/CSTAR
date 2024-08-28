@@ -17,9 +17,9 @@ for i = 1:numel(subjectnum)
     dayPath = dayPath(~ismember({dayPath.name}, {'.', '..'}));
 
     % remove the first and last day because they're not full 24 hour
-    for d = 2:length(dayPath)-1
-        data.(id).(dayPath(d).name) = load(fullfile(dayPath(d).folder,dayPath(d).name,filesep,'data.mat'));
-    end            
+    % for d = 2:length(dayPath)-1
+    %     data.(id).(dayPath(d).name) = load(fullfile(dayPath(d).folder,dayPath(d).name,filesep,'data.mat'));
+    % end            
 
     % McCamley Step Detection - use waist or else neck    
     daynum = fieldnames(data.(id));   
@@ -42,8 +42,8 @@ for i = 1:numel(subjectnum)
             sensor = fieldnames(data.(id).(daynum{j}));
             for s = 1:length(sensor)
                 try 
-                vertAcc = data.(id).(daynum{j}).(sensor{s}).acc;
-                wearTime = wornTime(vertAcc);
+                vertAcc = data.(id).(daynum{j}).(sensor{s}).acc;                
+                wearTime = wearTime(vertAcc,100);
                 saveData.timeData.(daynum{j}).(sensor{s}) = wearTime;  
 
                 fullWindow = calibrateData.(daynum{j}).(sensor{s}).fullWindow;
@@ -72,6 +72,7 @@ for i = 1:numel(subjectnum)
                 turnInfo = ShahTurn(filterData,rawGyro,threshold,minima,m);
                 saveData.turnData.(daynum{j}).(sensor{s}) = turnInfo;
                 catch
+                    daynum{d}
                     disp('No Calibration Window due to no step count')
                 end
             end
@@ -102,7 +103,6 @@ for i = 1:numel(subjectnum)
             catch
                 disp(append("Day did not work ",daynum{j}))
             end
-
         end        
         
         % Save 
