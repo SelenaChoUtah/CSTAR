@@ -1,4 +1,5 @@
-addpath(genpath(pwd))
+addpath('Data\')
+addpath('CSTAR\')
 %%
 currentFoldPath = cd;
 
@@ -16,8 +17,9 @@ for i = 1:numel(subjectnum)
     dayPath = dir(fullfile(subjectnum(i).folder,subjectnum(i).name));
     dayPath = dayPath(~ismember({dayPath.name}, {'.', '..'}));
 
+    % Gonna try all the days
     % remove the first and last day because they're not full 24 hour
-    for d = 2:length(dayPath)-1
+    for d = 1:length(dayPath)
         data.(id).(dayPath(d).name) = load(fullfile(dayPath(d).folder,dayPath(d).name,filesep,'data.mat'));
     end            
 
@@ -72,7 +74,7 @@ for i = 1:numel(subjectnum)
                 turnInfo = ShahTurn(filterData,rawGyro,threshold,minima,m);
                 saveData.turnData.(daynum{j}).(sensor{s}) = turnInfo;
                 catch
-                    disp('No Calibration Window due to no step count')
+                    disp(append('Error within Calibration, Sensor: ',sensor{s},' ',daynum{j}))
                 end
             end
         
@@ -94,7 +96,7 @@ for i = 1:numel(subjectnum)
                  saveData.headOnTrunkCount.(daynum{j}) = count;
                  saveData.individual.(daynum{j}) = length(startstop);
             else
-                disp("Missing sensor(s) for Head-on-Trunk")
+                disp(Missing sensor(s) for Head-on-Trunk  Sensor: ',sensor{s},' ',daynum{j})")
             end
             catch 
             end   
