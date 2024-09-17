@@ -29,7 +29,7 @@ end
 clearvars -except data
 
 %% 2) Head/Neck/Lumbar Turns ---------------------------------------------%
-clearvars placeData
+
 metrics = {'amplitude','angVelocity','turnDuration'};
 
 % go in and extract amp, angVel, number
@@ -47,9 +47,10 @@ for ii = 1:length(id)
     end
 end
 
+clearvars placeData
 % Turns per hour
 id = fieldnames(data);
-for ii = 1:length(id)
+for ii = 10%1:length(id)
     dayNum = fieldnames(data.(id{ii}).turnData);
     for dd = 1:length(dayNum)
         sensor = fieldnames(data.(id{ii}).turnData.(dayNum{dd}));
@@ -59,7 +60,6 @@ for ii = 1:length(id)
             index = data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).startstop(:,1);
             for nn = 2:length(numHoursIdx)
                 turnPerHour(nn-1) = length(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn)));
-                % stepsPerHour(nn-1) = 
             end
             placeData.(sensor{ss}).turnsPerHourMean{dd,ii} = mean(turnPerHour);
             placeData.(sensor{ss}).turnsPer24hr(:,dd) = turnPerHour';
@@ -138,7 +138,7 @@ for ss = 1:length(sensor)
 end
 
 %% 7) Ribbon Plot Days vs Hours
-close all
+
 [day,hr] = meshgrid(1:6,1:24);
 figure
 plot3(day,hr,placeData.head.turnsPer24hr,'LineWidth',5)
