@@ -1,6 +1,7 @@
 %% preprocess Axivity
-addpath(genpath(pwd))
-
+% addpath(genpath(pwd))
+addpath('Data\')
+addpath('CSTAR\')
 % The point of this script 
 %     1) Pull in raw axivity data
 %     2) Resample 
@@ -16,7 +17,7 @@ addpath(genpath(pwd))
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
 currentFoldPath = cd;
-normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
+normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
