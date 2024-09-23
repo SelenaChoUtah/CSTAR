@@ -7,11 +7,16 @@
 %     6) Mean/StDev/CV
 %     7) Ribbon Plots
 
-%% 1) Load Data IN
-addpath(genpath(pwd))
-currentFoldPath = cd('C:\Users\chose\Box\C-STAR Pilot\Data');
+cd('C:\Users\chose\Box\Digital Health Pilot - Multimodal Sensing')
+addpath('Data\')
+addpath('CSTAR\')
+% cd('C:\Users\chose\Box\C-STAR Pilot')
 
-processPath = dir(fullfile(currentFoldPath,'\Process'));
+%% 1) Load Data IN
+% addpath(genpath(pwd))
+currentFoldPath = cd;
+
+processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
 processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
 subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
         'SelectionMode','multiple','ListString',{processPath.name}));
@@ -88,11 +93,15 @@ id = fieldnames(data);
 for ii = 1:length(id)
     dayNum = fieldnames(data.(id{ii}).stepData);
     for dd = 1:length(dayNum)
+        try
         sensor = 'waist';
         placeData.(sensor).stepCount{dd,ii} = data.(id{ii}).stepData.(dayNum{dd}).(sensor).stepCount;
         placeData.(sensor).boutAverage{dd,ii} = mean(data.(id{ii}).stepData.(dayNum{dd}).(sensor).stepPerBout);
         if isnan(placeData.(sensor).boutAverage{dd,ii})
             placeData.(sensor).boutAverage{dd,ii} = [];
+        
+        end
+        catch
         end
     end
 end
@@ -116,9 +125,13 @@ sensor = fieldnames(placeData);
 for ss = 1:length(sensor)
     metrics = fieldnames(placeData.(sensor{ss}));
     for mm = 1:length(metrics)
+        try
         for dd = 1:length(placeData.(sensor{ss}).(metrics{mm}))
             average(dd) = mean(cell2mat(placeData.(sensor{ss}).(metrics{mm})(:,dd)));
             sd(dd) = std(cell2mat(placeData.(sensor{ss}).(metrics{mm})(:,dd)));
+        end
+        catch
+            disp(append(sensor{ss},metrics{mm}))
         end
         statsMean.(sensor{ss}).(metrics{mm}) = average;
         statsSD.(sensor{ss}).(metrics{mm}) = sd;
@@ -149,6 +162,81 @@ set(gca, 'YDir', 'reverse');
 grid on
 
 
+%% 
+close all
 
+sens = 'head';
+metricA = 'amplitudeCV';
+metricB = 'angVelocityCV';
+% 
+% figure
+% plot(statsSD.(sens).(metricA)(1:6),statsSD.(sens).angVelocity(1:6),'*')
+% hold on
+% plot(statsSD.(sens).(metricA)(7:end),statsSD.(sens).angVelocity(7:end),'*')
+% xlabel(metricA)
+% ylabel('Peak Velocity')
+% title(append(sens,' SD'))
 
+figure
+plot(statsMean.(sens).(metricA)(1:6),statsMean.(sens).(metricB)(1:6),'*')
+hold on
+plot(statsMean.(sens).(metricA)(7:end),statsMean.(sens).(metricB)(7:end),'*')
+xlabel(metricA)
+ylabel(metricB)
+title(append(sens,' Mean'))
 
+%%
+% cell2mat
+sensor = fieldnames(turn.dailyCV);
+for ss = 1:length(sensor)
+    metrics = fieldnames(turn);
+    for mm = 1:length(metrics)
+        try
+        for dd = 1:length(turn.(sensor{ss}).(metrics{mm}))
+            average(dd) = mean(cell2mat(turn.(sensor{ss}).(metrics{mm})(:,dd)));
+            sd(dd) = std(cell2mat(turn.(sensor{ss}).(metrics{mm})(:,dd)));
+        end
+        catch
+            disp(append(sensor{ss},metrics{mm}))
+        end
+        statsMean.(sensor{ss}).(metrics{mm}) = average;
+        statsSD.(sensor{ss}).(metrics{mm}) = sd;
+    end
+end
+
+%%
+
+for i = 1:length(turn.dailyCV.head.amplitude)
+
+    statsMean.head.amplitudeCV(i) = mean(nonzeros(turn.dailyCV.head.amplitude(:,i)));
+end
+
+%%
+figure
+id = fieldnames(data);
+for ii = 1:length(id)
+    nexttile
+    plot(data.(id{ii}).turnData.day2.head.amplitude,data.(id{ii}).turnData.day2.head.angVelocity,'*')
+    title(id{ii})
+    xlim([0 400])
+    ylim([0 600])
+end
+%%
+figure
+id = fieldnames(data);
+for ii = 1:length(id)
+    nexttile
+    histogram(data.(id{ii}).turnData.day2.head.amplitude,40,'Normalization','percentage')
+    title(id{ii})
+    xlim([0 400])
+    ylim([0 40])
+end
+
+figure
+id = fieldnames(data);
+for ii = 1:length(id)
+    nexttile
+    histfit(data.(id{ii}).turnData.day2.head.angVelocity,60,'kernel')
+    title(id{ii})
+    xlim([0 600])
+end
