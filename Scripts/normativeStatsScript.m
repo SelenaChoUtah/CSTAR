@@ -87,32 +87,32 @@ for i = 1:length(id)
         sensor = fieldnames(data.(id{i}).turnData.(dayNum{d}));
         for s = 1:length(sensor)
             for t = 1:length(turnMetric)
-                turn.dailyAverage.(sensor{s}).(turnMetric{t})(d,1) = mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
-                turn.dailyStDev.(sensor{s}).(turnMetric{t})(d,1) = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
-                turn.dailyNumber.(sensor{s}).(turnMetric{t})(d,1) = length(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
-                turn.dailyCV.(sensor{s}).(turnMetric{t})(d,1) = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}))/mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
+                turn.dailyAverage.(sensor{s}).(turnMetric{t})(d,i) = mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
+                turn.dailyStDev.(sensor{s}).(turnMetric{t})(d,i) = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
+                turn.dailyNumber.(sensor{s}).(turnMetric{t})(d,i) = length(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
+                turn.dailyCV.(sensor{s}).(turnMetric{t})(d,i) = std(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}))/mean(data.(id{i}).turnData.(dayNum{d}).(sensor{s}).(turnMetric{t}));
             end
         end
     end 
     for t = 1:length(turnMetric)
         for s = 1:length(sensor)
-            turn.weeklyAverage.(sensor{s}).(turnMetric{t})(i,1) = mean(dailyAverage.(sensor{s}).(turnMetric{t}));
-            turn.weeklyStDev.(sensor{s}).(turnMetric{t})(i,1) = std(dailyStDev.(sensor{s}).(turnMetric{t}));
-            turn.weeklyNumberAverage.(sensor{s}).(turnMetric{t})(i,1) = mean(dailyNumber.(sensor{s}).(turnMetric{t}));
-            turn.weeklyCV.(sensor{s}).(turnMetric{t})(i,1) = mean(dailyCV.(sensor{s}).(turnMetric{t}));
+            turn.weeklyAverage.(sensor{s}).(turnMetric{t})(i,i) = mean(dailyAverage.(sensor{s}).(turnMetric{t}));
+            turn.weeklyStDev.(sensor{s}).(turnMetric{t})(i,i) = std(dailyStDev.(sensor{s}).(turnMetric{t}));
+            turn.weeklyNumberAverage.(sensor{s}).(turnMetric{t})(i,i) = mean(dailyNumber.(sensor{s}).(turnMetric{t}));
+            turn.weeklyCV.(sensor{s}).(turnMetric{t})(i,i) = mean(dailyCV.(sensor{s}).(turnMetric{t}));
         end
     end
 end
 
-results = [
-    "sensor", "head", "neck", "thoracic";
-    "mean", mean(wearTime.head),mean(wearTime.neck),mean(wearTime.waist);
-    "std", std(wearTime.head),std(wearTime.neck),std(wearTime.waist)
-]
+% results = [
+%     "sensor", "head", "neck", "thoracic";
+%     "mean", mean(wearTime.head),mean(wearTime.neck),mean(wearTime.waist);
+%     "std", std(wearTime.head),std(wearTime.neck),std(wearTime.waist)
+% ]
 
-% Write to CSV
-filename = 'normativeResults.xls';
-writematrix(results, filename,'Sheet','Step Count');
+% % Write to CSV
+% filename = 'normativeResults.xls';
+% writematrix(results, filename,'Sheet','Step Count');
 
 %% Step Statistics
 
