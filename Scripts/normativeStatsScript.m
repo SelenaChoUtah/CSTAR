@@ -25,11 +25,17 @@ for i = 1:length(id)
     for j = 1:length(numDay)
         sensor = fieldnames(data.(id{i}).timeData.(numDay{j}));
         for s = 1:length(sensor)
-            wearTime.(sensor{s})(aa,1) = data.(id{i}).timeData.(numDay{j}).(sensor{s})(3);            
+            wearTime.(sensor{s})(j,i) = data.(id{i}).timeData.(numDay{j}).(sensor{s}).wearTime;            
         end
         aa = aa+1;
     end
 end
+
+
+for i = 1:length(turn.dailyCV.head.amplitude)
+    statsMean.head.amplitudeCV(i) = mean(nonzeros(turn.dailyCV.head.amplitude(:,i)));
+end
+
 
 disp("Average Wear Time per Day")
 disp(["head" mean(wearTime.head) std(wearTime.head)])
@@ -157,7 +163,7 @@ results = [
     "metric", "step count day" "steps per hour";
     "mean",  mean([stepCountAvg stepBoutAvg]);
     "std", sqrt(mean(stepCountVar)),sqrt(mean(stepBoutVar));
-]
+];
 
 filename = 'normativeResults.xls';
 writematrix(results, filename,'Sheet',"Step Count");
