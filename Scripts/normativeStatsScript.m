@@ -1,4 +1,4 @@
-addpath(genpath(pwd))
+% addpath(genpath(pwd))
 currentFoldPath = cd;
 
 processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
@@ -74,6 +74,14 @@ results = [
     "mean", mean(wearWeek.head),mean(wearWeek.neck),mean(wearWeek.waist);
     "std", std(wearWeek.head),std(wearWeek.neck),std(wearWeek.waist)
 ]
+
+%% percentage worn over days
+
+for ii = 1:length(wearTime.head)
+    missingDays(ii) = (10 - length(find(wearTime.head(:,ii)==0)))/7;
+end
+
+
 
 %% Turn Statistics
 
