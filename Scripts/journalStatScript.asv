@@ -343,51 +343,52 @@ saveas(gcf,append(taskName,'_icc'),'emf')
 
 sensor = 'head';
 id = fieldnames(data);
-for ii = 6%1:length(id)
+for ii = 4%1:length(id)
     dayNum = fieldnames(data.(id{ii}).timeData);
-    figure
-    for dd = 1:length(dayNum)
+    for dd = 1%:length(dayNum)
         counts = data.(id{ii}).timeData.(dayNum{dd}).(sensor).activityCounts;
         consecutive_count = 0;
         below_threshold = counts<3;
-        nexttile
-        plot(below_threshold,'*')
-        % for i = 1:length(counts)
-        %     if ~below_threshold(i)
-        %         consecutive_count = consecutive_count + 1; % Increment count if below threshold
-        %     elseif ~below_threshold(i+1)
-        %         consecutive_count = consecutive_count + 1; % Reset count if above threshold
-        %     else
-        %         consecutive_count = 0;
-        %     end
-        % 
-        %     if consecutive_count >= 90
-        %         % Mark the indices as part of the period
-        %         awake = (i-consecutive_count+1:i);
-        %         break
-        %     end
-        % end
-        % 
-        % for i = length(counts):-1:1
-        %     if below_threshold(i)
-        %         consecutive_count = consecutive_count + 1; % Increment count if below threshold
-        %     elseif below_threshold(i-1)
-        %         consecutive_count = consecutive_count + 1; % Reset count if above threshold
-        %     else
-        %         consecutive_count = 0;
-        %     end
-        % 
-        %     if consecutive_count >= 90
-        %         % Mark the indices as part of the period
-        %         beforeBed = (i:i+consecutive_count-1);
-        %         break
-        %     end
-        % end
+
+        for i = 1:length(counts)
+            if ~below_threshold(i)
+                consecutive_count = consecutive_count + 1; % Increment count if below threshold
+            elseif ~below_threshold(i+1)
+                consecutive_count = consecutive_count + 1; % Reset count if above threshold
+            else
+                consecutive_count = 0;
+            end
+
+            if consecutive_count >= 90
+                % Mark the indices as part of the period
+                awake = (i-consecutive_count+1:i);
+                break
+            end
+        end
+        disp('does ')
+
+        for i = length(counts):1
+            if ~below_threshold(i)
+                consecutive_count = consecutive_count + 1; % Increment count if below threshold
+            elseif ~below_threshold(i+1)
+                consecutive_count = consecutive_count + 1; % Reset count if above threshold
+            else
+                consecutive_count = 0;
+            end
+
+            if consecutive_count >= 90
+                % Mark the indices as part of the period
+                beforeBed = (i-consecutive_count+1:i);
+                break
+            end
+        end
+
+       
 
     end
 end
 
-% find first period of 90min to detect that it's awake
+
 
 
 
