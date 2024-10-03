@@ -17,7 +17,7 @@ addpath('CSTAR\')
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
 currentFoldPath = cd;
-normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
@@ -55,9 +55,9 @@ for ss = 1:length(subjectnum)
                 % If the folder doesn't exist, create it
                 mkdir(dayFold)
             end
-            data = sortData.(subID{i}).(daynum{j});
-            savePath = fullfile(dayFold,'data.mat');
-            save(savePath, '-struct','data'); 
+            data4 = sortData.(subID{i}).(daynum{j});
+            % savePath = fullfile(dayFold,'data.mat');
+            % save(savePath, '-struct','data'); 
         end
         disp(append("Saved Subject ",subID{i}))
     end
