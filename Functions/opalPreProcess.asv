@@ -137,7 +137,6 @@ function opal = opalPreProcess(subjectnum)
             time.TimeZone = 'America/Denver';
             opal.(string(combinedCsv.Condition(t))).timepoint = time;
         end
-        
 
         fsr = 100;
         % read data
