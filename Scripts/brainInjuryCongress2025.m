@@ -1,15 +1,15 @@
 clear all
 addpath(genpath('Data\'))
 addpath(genpath('CSTAR\'))
-currentPath = cd('C:\Users\chose\Box\Digital Health Pilot - Multimodal Sensing');
+currentPath = cd;
 
 % Load in opal and segmented bittium data 
 
-bitPath = fullfile(currentPath,'Data/Lab/preprocess/bittium');
+bitPath = fullfile(currentPath,'Data/preprocess/bittium');
 bitFolder = dir(bitPath);
 bitFolder = bitFolder(~ismember({bitFolder.name},{'.','..'}));
 
-opalPath = fullfile(currentPath,'Data/Lab/preprocess/opal');
+opalPath = fullfile(currentPath,'Data/preprocess/opal');
 opalFolder = dir(opalPath);
 opalFolder = opalFolder(~ismember({opalFolder.name},{'.','..'}));
 
@@ -71,7 +71,7 @@ clearvars -except interest bittium opal polar currentPath
 
 id = fieldnames(interest);
 
-for ii = 1%:length(id)
+for ii = 2%:length(id)
     task = fieldnames(interest.(id{ii}));
     for tt = 1:length(task)
         recordName = id{ii};

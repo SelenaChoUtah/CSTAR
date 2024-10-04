@@ -64,12 +64,15 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     N = length(signal);
 
     % wavelet instead of gqrs bc it's better for analyzing non-stationary signals,
-    wqrs([recordName, '.dat'],N); % writes annotates *.wqrs
+    gqrs(recordName,N); % writes annotates *.wqrs
 
-    ann = rdann(recordName,'wqrs',[],N);
-    % [heartRate, time] = rr2bpm(ann, fs);
+    % Needs work to output saved qrs
+    ann = rdann(recordName,'qrs',[],N);
+    [heartRate, time] = rr2bpm(ann, fs);
     
+    figure
     plot(tm,signal(:,1));hold on;grid on
     plot(tm(ann),signal(ann,1),'ro')
+    lsline
 
 end
