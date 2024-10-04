@@ -59,10 +59,10 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     fwrite(fid, ecgData, 'int16');
     fclose(fid);
     
-    [signal, ~, ~] = rdsamp(fullfile(outputDir, recordName));
+    [signal, ~, ~] = rdsamp('DHI001.dat');
     N = length(signal);
 
     % wavelet instead of gqrs bc it's better for analyzing non-stationary signals,
-    wqrs(fullfile(dataFilePath),numSamples); % writes annotates *.wqrs
+    wqrs(fullfile(dataFilePath),N); % writes annotates *.wqrs
 
 end

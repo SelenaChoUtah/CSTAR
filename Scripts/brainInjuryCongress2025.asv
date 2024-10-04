@@ -1,6 +1,6 @@
 clear all
 addpath(genpath('Data\'))
-addpath(genpath('CSTAR\'))
+addpath('CSTAR\')
 currentPath = cd('C:\Users\chose\Box\Digital Health Pilot - Multimodal Sensing');
 
 % Load in opal and segmented bittium data 

@@ -1,5 +1,6 @@
 %% Add Paths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % addpath(genpath(pwd))
+clear all
 addpath('Data\')
 addpath('CSTAR\')
 addpath('Analysis\')
@@ -23,13 +24,13 @@ subjectnum = subfolder(listdlg('PromptString',{'Select Subjects to Process',''},
         'SelectionMode','multiple','ListString',{subfolder.name}));
 
 % -Preprocess APDM OPAL Data---------------------------------------------%
-for i = 11:length(subjectnum)  
+for i = 1:length(subjectnum)  
     opal.(string(subjectnum(i).name)) = opalPreProcess(subjectnum(i));
     bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i));    
    % polar.(string(subjectnum(i).name)) = polarPreProcess(subjectnum(i));
 end
 
-%% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clearvars segmentPolarStruct segmentBit
 fn = fieldnames(bittium);

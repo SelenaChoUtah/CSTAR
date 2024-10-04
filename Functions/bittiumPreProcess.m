@@ -56,17 +56,19 @@ function bittium = bittiumPreProcess(subjectnum)
         accZ= [accZ;bitraw.Accelerometer_X{i,:}];
     end
 
-    fsAcc = 100;
+    fsAcc = length(bitraw.Accelerometer_X{1,1});
     acc = [accX accY accZ];
     accR = resample(acc, fsAcc, fsAcc);
     bittium.acc = alignBittiumAcc(accR);
+    bittium.fsAcc = fsAcc;
     
     bittium.startTime = datetime(bitInfo.StartTime,'InputFormat','HH.mm.ss', 'Format', 'HH:mm:ss','TimeZone','America/Denver');
     bittium.accTime = string(bittium.startTime + seconds(1/fsAcc:1/fsAcc:height(bitraw)))';
 
-    fsEcg = 250;
+    fsEcg = length(bitraw.ECG{1,1});
     bittium.ecg = ecg;
-    bittium.ecgTime = string(bittium.startTime + seconds(1/fsEcg:1/fsEcg:height(bitraw)))';
+    bittium.ecgTime = string(bittium.startTime + seconds(1/fsEcg:1/fsEcg:height(bitraw)))'; 
+    bittium.fsEcg = fsEcg;
 
     fsr = 100;
     bittium.ecgDS = resample(ecg,fsr,fsEcg);

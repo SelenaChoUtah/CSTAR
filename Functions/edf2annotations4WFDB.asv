@@ -1,0 +1,26 @@
+function edf2annotations4WFDB(bittiumFilename,fs)
+
+recordName = subjects{s};
+folderName = 'physionetFormat';
+folderVariable = 'Buffalo';
+fs = interest.(subjects{s}).(folderVariable).fs;
+ecgData = interest.(subjects{s}).Buffalo.ecg;
+turnDatFile(recordName,fs,ecgData,folderName,folderVariable)
+
+[signal, ~, tm] = rdsamp(bittiumFilename);
+N = length(signal);
+ann = rdann(bittiumFilename,'wqrs',[],N);
+[heartRate, time] = rr2bpm(ann, fs);
+
+plot(tm,signal(:,1));hold on;grid on
+plot(tm(ann),signal(ann,1),'ro')
+ % recordName = fullfile('physionetFormat',folderVariable,subjects{i},subjects{i});
+ %    [signal, ~, tm] = rdsamp(recordName);
+ %    N = length(signal);
+ %    ann = rdann(recordName,'wqrs',[],N);
+ %    buffaloTask.(subjects{i}).rrIntervals = ann;
+ %    fs = interest.(subjects{s}).(folderVariable).fs;
+ %    [heartRate, time] = rr2bpm(ann, fs);
+ %    buffaloTask.(subjects{i}).heartRate = heartRate;
+ %    buffaloTask.(subjects{i}).hrTime = time;
+end
