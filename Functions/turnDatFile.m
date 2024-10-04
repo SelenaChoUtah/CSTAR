@@ -59,10 +59,17 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     fwrite(fid, ecgData, 'int16');
     fclose(fid);
     
-    [signal, ~, ~] = rdsamp(fullfile(outputDir, recordName));
+    cd(outputDir)
+    [signal, ~, tm] = rdsamp([recordName, '.dat']);
     N = length(signal);
 
     % wavelet instead of gqrs bc it's better for analyzing non-stationary signals,
-    wqrs(fullfile(dataFilePath),numSamples); % writes annotates *.wqrs
+    wqrs([recordName, '.dat'],N); % writes annotates *.wqrs
+
+    ann = rdann(recordName,'wqrs',[],N);
+    % [heartRate, time] = rr2bpm(ann, fs);
+    
+    plot(tm,signal(:,1));hold on;grid on
+    plot(tm(ann),signal(ann,1),'ro')
 
 end
