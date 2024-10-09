@@ -17,7 +17,7 @@ function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateW
     Rot_data = [];
 
     % Calibrate using windows of large walking bouts
-    for c = 1:length(fullWindow)
+    for c = 1:height(fullWindow)
         % Take the window of walking bouts
         swayV = fullV(calibrateWindow(c,1):calibrateWindow(c,2));
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));

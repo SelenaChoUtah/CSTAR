@@ -14,7 +14,7 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
     actualAP = [];
 
     % Calibrate using windows of large walking bouts
-    for c = 1:length(fullWindow)
+    for c = 1:height(fullWindow)
         % Take the window of walking bouts
         swayV = fullV(calibrateWindow(c,1):calibrateWindow(c,2));
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));

@@ -26,7 +26,7 @@ function turnInfo = ShahTurn(filtVertGyro,rawVertGyro,threshold,minima,m)
         end
     end
 
-    data = ShahFilter(rawVertGyro,27);
+    data = ShahFilter(rawVertGyro,0.55,100);
 
     % find where it crosses minimum threshold
     ss = zeros(length(validMaxLoc),2);
@@ -89,7 +89,7 @@ function turnInfo = ShahTurn(filtVertGyro,rawVertGyro,threshold,minima,m)
         end
     end
 
-    data = -1*(ShahFilter(rawVertGyro,27));
+    data = -1*(ShahFilter(rawVertGyro,0.3,100));
     % find where it crosses minimum threshold
     ss = zeros(length(validMaxLoc),2);
     for i = 1:length(validMaxLoc)
