@@ -1,5 +1,5 @@
-addpath('Data\')
-addpath('CSTAR\')
+addpath(genpath('Data\'))
+addpath(genpath('CSTAR\'))
 %%
 currentFoldPath = cd;
 
