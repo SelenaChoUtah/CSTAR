@@ -1,4 +1,4 @@
-function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThreshold,velocityThreshold)
+function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThreshold,velocityThreshold,impulseDuration)
 
     % Step 3: Find Valid Minima: To ensure the algorithm does
     % not include shallow, local minima (10 deg/s) that may result from a brief
@@ -34,7 +34,7 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
     % and calculate the absolute value. We chose the M for this filter
     % such that the impulse response duration for this edge filter was
     % 0.383 s and the cutoff frequency was 3.0 Hz.
-    impulseDuration = 0.3831;
+    % impulseDuration = 0.3831;
     absFiltData = abs(ShahFilter(rawVertGyro,impulseDuration,100));
     filtData = ShahFilter(rawVertGyro,impulseDuration,100);
 

@@ -19,16 +19,32 @@ clearvars -except data currentFoldPath
 
 %% Using head turn filters to detect head turn
 
-
-% Turning Algo
-rawGyro = rotate.(id).(daynum{j}).(sensor{s}).gyro(:,3);
-m = 30;
-filterData = ShahFilter(rawGyro,m);               
-threshold = 15; % minimum deg/s turning angular velocity for head turn
-minima = 5; % start and end of head turn                
-turnInfo = ShahTurn(filterData,rawGyro,threshold,minima,m);
-saveData.turnData.(daynum{j}).(sensor{s}) = turnInfo;
-catch
-    disp(append('Error within Calibration, Sensor: ',sensor{s},' ',daynum{j}))
+id = fieldnames(data);
+figure
+close all
+for ii = 1:length(id)
+    try
+    sensor = "head";
+    task = "gaitPivot";
+    gyro = data.(id{ii}).(task).(sensor).gyro(:,3);
+    impulseDuration = 1.476;
+    filterData = ShahFilter(gyro,impulseDuration,100);    
+    % break
+    amplitudeThreshold = 10; % minimum amplitude for head turn
+    velocityThreshold = 15; % deg/s peak velocity to quantify as turn
+    minima = 5; % Local Minima     
+    impulseDuration = 0.2; % Larger value means more smoothed
+    turnInfo.(id{ii}) = absShahTurn(filterData,gyro,minima,amplitudeThreshold,velocityThreshold,impulseDuration);
+    nexttile
+    hold on
+    plot(gyro)
+    plot(turnInfo.(id{ii}).startstop,gyro(turnInfo.(id{ii}).startstop),'*')
+    title(id{ii})
+    % disp(height(turnInfo.(id{ii}).startstop))
+    % disp(append("Turn Amplitude: ", num2str(abs(180-turnInfo.(id{ii}).amplitude))))
+    disp(append("Turn Amplitude: ", num2str(turnInfo.(id{ii}).amplitude(end))))
+    catch
+    end
 end
+
 

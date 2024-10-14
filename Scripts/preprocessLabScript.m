@@ -1,6 +1,6 @@
 %% Add Paths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % addpath(genpath(pwd))
-clear all
+clear
 addpath('Data\')
 addpath(genpath('RawData\'))
 addpath('CSTAR\')
@@ -49,7 +49,7 @@ for b = 1:length(fn)
     % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);
 end
 
-%% Segment Axivity Data
+%% Segment Axivity Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Resample data
 subject = resampleAxivity(subjectnum);
@@ -62,9 +62,10 @@ id = fieldnames(opal);
 for ii = 1:length(id)
     % Gathering timepoints from opal data
     tasks = fieldnames(opal.(id{ii}));
+    clearvars timeLength timepoint
     for tt = 1:length(tasks)
         % timepoints from opal
-        timepoint.(tasks{tt}) = opal.(id{ii}).(tasks{tt}).timepoint;
+        timepoint.(tasks{tt}) = opal.(id{ii}).(tasks{tt}).timepoint+seconds(1)/3;
         timeLength.(tasks{tt}) = length(opal.(id{ii}).(tasks{tt}).head.time);     
     end
 
@@ -73,6 +74,53 @@ for ii = 1:length(id)
 
 end
 
+%% Plot axivity gyro with opal
+
+id = fieldnames(opal);
+figure
+% close all
+for ii = 1:length(id)
+    sensor = "head";
+    task = "gaitPivot";
+    gyroO = opal.(id{ii}).(task).(sensor).gyro(:,3);
+    gyroA = segmentAxivity.(id{ii}).(task).(sensor).gyro(:,3);
+
+    nexttile
+    hold on
+    plot(gyroO)
+    plot(gyroA)
+    % plot(detrend(gyroA))
+
+
+end
+
+id = fieldnames(segmentAxivity);
+figure
+close all
+for ii = 1:length(id)
+    try
+    sensor = "head";
+    task = "gaitPivot";
+    gyro = segmentAxivity.(id{ii}).(task).(sensor).gyro(:,3);
+    impulseDuration = 1.476;
+    filterData = ShahFilter(gyro,impulseDuration,100);    
+    % break
+    amplitudeThreshold = 10; % minimum amplitude for head turn
+    velocityThreshold = 15; % deg/s peak velocity to quantify as turn
+    minima = 5; % Local Minima     
+    impulseDuration = 0.2; % Larger value means more smoothed
+    turnInfo.(id{ii}) = absShahTurn(filterData,gyro,minima,amplitudeThreshold,velocityThreshold,impulseDuration);
+    nexttile
+    hold on
+    plot(gyro)
+    plot(turnInfo.(id{ii}).startstop,gyro(turnInfo.(id{ii}).startstop),'*')
+    title(id{ii})
+    % disp(height(turnInfo.(id{ii}).startstop))
+    % disp(append("Turn Amplitude: ", num2str(abs(180-turnInfo.(id{ii}).amplitude))))
+    disp(append("Turn Amplitude: ", num2str(turnInfo.(id{ii}).amplitude(end))))
+    catch
+    end
+end
 
 
 %%
@@ -116,16 +164,26 @@ for f = 1:length(id)
     save(axivityFullPath, '-struct', 'segmentAxivity', char(id(f)));
 end
 
-%% Save Axivity
+%% Save Data into each individual folder
 
 prepath = fullfile(currentPath,'Data\preprocess');
 preFolder = dir(prepath);
 axivityfullpath = fullfile(prepath,"axivity\");
+opalpath = fullfile(prepath,"opal\");
 
-id = fieldnames(segmentAxivity);
+id = fieldnames(opal);
 
 for ii = 1:length(id)
-    
+    % % Opal
+    % subIDFold = strcat(opalpath, id{ii},filesep);
+    % if ~isfolder(subIDFold)
+    %     mkdir(subIDFold)
+    % end
+    % savePath = strcat(subIDFold,'data.mat');
+    % opalData = opal.(id{ii});
+    % save(savePath, '-struct', 'opalData');
+
+    % Axivity
     subIDFold = strcat(axivityfullpath, id{ii},filesep);
     if ~isfolder(subIDFold)
         mkdir(subIDFold)

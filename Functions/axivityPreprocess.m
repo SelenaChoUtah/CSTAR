@@ -42,7 +42,7 @@ function segmentAxivityStruct = axivityPreprocess(axivity, timepoint, timeLength
 
     for tt = 1:length(task)
         for ss = 1:length(sensor)  
-            try
+            % try
             startTimeStr = string(timepoint.(task{tt}));             
     
             % Find the time index
@@ -63,7 +63,6 @@ function segmentAxivityStruct = axivityPreprocess(axivity, timepoint, timeLength
             Fc = 30;
             Fs = 100;
 
-
             [A_data,Rot_data] = rotateIMU(acc,4,40,100,fullWindow,calibrateWindow);
             % Rotate Gyroscope
             [G_data] = rotateGyro(gyro,Rot_data,order,Fc,Fs,fullWindow,calibrateWindow);
@@ -72,9 +71,9 @@ function segmentAxivityStruct = axivityPreprocess(axivity, timepoint, timeLength
             segmentAxivityStruct.(task{tt}).(sensor{ss}).gyro = G_data;
             segmentAxivityStruct.(task{tt}).(sensor{ss}).time = axivity.(sensor{ss})(startIndex:endIndex,1);
             segmentAxivityStruct.(task{tt}).(sensor{ss}).fs = fs;
-            catch
-                disp(append("Error in ",task{tt}))
-            end
+            % catch
+            %     disp(append("Error in ",task{tt}))
+            % end
 
         end
     end

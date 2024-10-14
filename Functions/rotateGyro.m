@@ -33,9 +33,9 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
         trueV = sectionML.*(Rot_data(c,2))+(trueVP).*(cos(Rot_data(c,2)));
     
         % Estimate of tilt angle
-        sV = mean(trueV);
-        sML = mean(trueML);
-        sAP = mean(trueAP);
+        sV = mean(swayV);
+        sML = mean(swayML);
+        sAP = mean(swayAP);
 
         Vert = trueV - sV;
         ML = trueML - sML;

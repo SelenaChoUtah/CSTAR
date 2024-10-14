@@ -49,7 +49,7 @@ for b = 1:length(fn)
     % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);
 end
 
-%% Segment Axivity Data
+%% Segment Axivity Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Resample data
 subject = resampleAxivity(subjectnum);
@@ -64,12 +64,31 @@ for ii = 1:length(id)
     tasks = fieldnames(opal.(id{ii}));
     for tt = 1:length(tasks)
         % timepoints from opal
-        timepoint.(tasks{tt}) = opal.(id{ii}).(tasks{tt}).timepoint;
+        timepoint.(tasks{tt}) = opal.(id{ii}).(tasks{tt}).timepoint+seconds(1)/3;
         timeLength.(tasks{tt}) = length(opal.(id{ii}).(tasks{tt}).head.time);     
     end
 
     % Segment Axivity
     segmentAxivity.(id{ii}) = axivityPreprocess(axivity.(id{ii}), timepoint, timeLength);
+
+end
+
+%% Plot axivity gyro with opal
+
+id = fieldnames(opal);
+figure
+close all
+for ii = 1:length(id)
+    sensor = "head";
+    task = "gaitPivot";
+    gyroO = opal.(id{ii}).(task).(sensor).gyro(:,3);
+    gyroA = segmentAxivity.(id{ii}).(task).(sensor).gyro(:,3);
+
+    nexttile
+    hold on
+    plot(gyroO)
+    plot(gyroA)
+    plot(detrend(gyroA))
 
 end
 
@@ -116,23 +135,33 @@ for f = 1:length(id)
     save(axivityFullPath, '-struct', 'segmentAxivity', char(id(f)));
 end
 
-%% Save Axivity
+%% Save Data into each individual folder
 
 prepath = fullfile(currentPath,'Data\preprocess');
 preFolder = dir(prepath);
 axivityfullpath = fullfile(prepath,"axivity\");
+opalpath = fullfile(prepath,"opal\");
 
-id = fieldnames(segmentAxivity);
+id = fieldnames(opal);
 
 for ii = 1:length(id)
-    
-    subIDFold = strcat(axivityfullpath, id{ii});
+    % Opal
+    subIDFold = strcat(opalpath, id{ii},filesep);
     if ~isfolder(subIDFold)
         mkdir(subIDFold)
     end
     savePath = strcat(subIDFold,'data.mat');
-    save(savePath, '-struct','saveData');
+    opalData = opal.(id{ii});
+    save(savePath, '-struct', 'opalData');
 
+    % % Axivity
+    % subIDFold = strcat(axivityfullpath, id{ii},filesep);
+    % if ~isfolder(subIDFold)
+    %     mkdir(subIDFold)
+    % end
+    % savePath = strcat(subIDFold,'data.mat');
+    % saveData = segmentAxivity.(id{ii});
+    % save(savePath,'-struct','saveData');
 end
 
 
