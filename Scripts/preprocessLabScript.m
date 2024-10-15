@@ -82,8 +82,8 @@ figure
 for ii = 1:length(id)
     sensor = "head";
     task = "gaitPivot";
-    gyroO = opal.(id{ii}).(task).(sensor).gyro(:,3);
-    gyroA = segmentAxivity.(id{ii}).(task).(sensor).gyro(:,3);
+    gyroO = opal.(id{ii}).(task).(sensor).acc(:,3)-9.81;
+    gyroA = segmentAxivity.(id{ii}).(task).(sensor).acc(:,3);
 
     nexttile
     hold on
@@ -94,6 +94,7 @@ for ii = 1:length(id)
 
 end
 
+%%
 id = fieldnames(segmentAxivity);
 figure
 close all
