@@ -12,7 +12,7 @@ for i = 1:numel(subjectnum)
     % Save Data into Process
     id = string(subjectnum(i).name);
     disp(id)    
-    clearvars data saveData rotate rotate2   
+    clearvars data saveData rotate       
     % Load Data
     dayPath = dir(fullfile(subjectnum(i).folder,subjectnum(i).name));
     dayPath = dayPath(~ismember({dayPath.name}, {'.', '..'}));

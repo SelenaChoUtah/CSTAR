@@ -16,7 +16,7 @@ addpath('CSTAR\')
 
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
-currentFoldPath = cd;
+% currentFoldPath = cd;
 normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
 
 % Keep only subject folders

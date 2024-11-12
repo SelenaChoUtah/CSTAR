@@ -44,7 +44,7 @@ function subject = resampleAxivity(subjectnum)
         % Loop through each CWA file
         for j = 1:length(subFolder)
             % Extract Sensor Location for naming
-            imuLocation = extractBetween(subFolder(j).name, 16, '.cwa');
+            imuLocation = extractBetween(subFolder(j).name, 13, '.cwa');
             
             % Resample Data
             imuPath = fullfile(subFolder(j).folder,subFolder(j).name);
