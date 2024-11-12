@@ -26,7 +26,7 @@ function turnInfo = ShahTurn(filtVertGyro,rawVertGyro,threshold,minima,m)
         end
     end
 
-    data = ShahFilter(rawVertGyro,27);
+    data = ShahFilter(rawVertGyro,m,0.3,100);
 
     % find where it crosses minimum threshold
     ss = zeros(length(validMaxLoc),2);
@@ -72,11 +72,11 @@ function turnInfo = ShahTurn(filtVertGyro,rawVertGyro,threshold,minima,m)
     lvalidAngVel = lmaxAngVel(lindx);
     lstsp = lstartstop(lindx,:);
 
-    % figure
-    % plot(filtVertGyro,LineWidth=2)
-    % hold on
-    % plot(validMaxLoc,filtVertGyro(validMaxLoc),'k*') 
-    % axis tight
+    figure
+    plot(filtVertGyro,LineWidth=2)
+    hold on
+    plot(validMaxLoc,filtVertGyro(validMaxLoc),'k*') 
+    axis tight
 
     % Right (negative) turns
     validMaxLoc = [];
