@@ -14,7 +14,7 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
     actualAP = [];
 
     % Calibrate using windows of large walking bouts
-    for c = 1:length(fullWindow)
+    for c = 1:height(fullWindow)
         % Take the window of walking bouts
         swayV = fullV(calibrateWindow(c,1):calibrateWindow(c,2));
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
@@ -33,9 +33,9 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
         trueV = sectionML.*(Rot_data(c,2))+(trueVP).*(cos(Rot_data(c,2)));
     
         % Estimate of tilt angle
-        sV = mean(trueV);
-        sML = mean(trueML);
-        sAP = mean(trueAP);
+        sV = mean(swayV);
+        sML = mean(swayML);
+        sAP = mean(swayAP);
 
         Vert = trueV - sV;
         ML = trueML - sML;

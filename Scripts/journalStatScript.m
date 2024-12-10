@@ -428,6 +428,25 @@ for ii = 1:length(id)
     for dd = 1:day
         for hh = 1:hr        
             if placeData.head.ampPer24hr.(id{ii})(hh,dd) ~= 0 && placeData2.head.ampPer24hr.(id{ii})(hh,dd) ~= 0 && ~isnan(placeData.head.ampPer24hr.(id{ii})(hh,dd)) && ~isnan(placeData2.head.ampPer24hr.(id{ii})(hh,dd))
+                % amplitude = placeData.head.ampPer24hr.(id{ii})(hh,dd);
+                % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                % if abs(amplitude2-amplitude)<20
+                %     angVelocity = placeData.head.velPer24hr.(id{ii})(hh,dd);
+                %     numOfTurns = placeData.head.turnsPer24hr.(id{ii})(hh,dd);
+                %     % method = 1 is walking
+                %     method = 1;
+                %     newRow = table(string(id{ii}), dd, hh, method, amplitude, angVelocity, numOfTurns,'VariableNames', varNames);
+                % 
+                %     % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                %     angVelocity2 = placeData2.head.velPer24hr.(id{ii})(hh,dd);
+                %     numOfTurns2 = placeData2.head.turnsPer24hr.(id{ii})(hh,dd);
+                %     % method = 2 is calibration
+                %     method = 2;
+                %     newRow2 = table(string(id{ii}), dd, hh, method, amplitude2, angVelocity2, numOfTurns2,'VariableNames', varNames);
+                %     compCaliTable = [compCaliTable; newRow; newRow2];
+                %     walkTable = [walkTable; newRow2];
+                % end
+
                 amplitude = placeData.head.ampPer24hr.(id{ii})(hh,dd);
                 angVelocity = placeData.head.velPer24hr.(id{ii})(hh,dd);
                 numOfTurns = placeData.head.turnsPer24hr.(id{ii})(hh,dd);
@@ -435,7 +454,7 @@ for ii = 1:length(id)
                 method = 1;
                 newRow = table(string(id{ii}), dd, hh, method, amplitude, angVelocity, numOfTurns,'VariableNames', varNames);
 
-                amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
                 angVelocity2 = placeData2.head.velPer24hr.(id{ii})(hh,dd);
                 numOfTurns2 = placeData2.head.turnsPer24hr.(id{ii})(hh,dd);
                 % method = 2 is calibration
@@ -443,6 +462,7 @@ for ii = 1:length(id)
                 newRow2 = table(string(id{ii}), dd, hh, method, amplitude2, angVelocity2, numOfTurns2,'VariableNames', varNames);
                 compCaliTable = [compCaliTable; newRow; newRow2];
                 walkTable = [walkTable; newRow2];
+                
             end
         end
     end
@@ -480,6 +500,26 @@ disp(lmeAngVelocity)
 
 disp('NumOfTurns Model Summary:')
 disp(lmeNumOfTurns)
+
+
+%% Scatterplots
+
+figure
+hold on
+nexttile
+scatter(compCaliTable.amplitude(compCaliTable.method==1),compCaliTable.amplitude(compCaliTable.method==2))
+title("amplitude")
+nexttile
+scatter(compCaliTable.angVelocity(compCaliTable.method==1),compCaliTable.angVelocity(compCaliTable.method==2))
+title("angVelocity")
+nexttile
+scatter(compCaliTable.numOfTurns(compCaliTable.method==1),compCaliTable.numOfTurns(compCaliTable.method==2))
+title("numOfTurns")
+
+
+
+
+
 
 %% Find the awake periods
 

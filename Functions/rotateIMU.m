@@ -1,11 +1,11 @@
 function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateWindow)
     %% Filters[data] data using butterworth filter with specified [order] order,
     % [Fc] cuttoff frequency and [Fs] sampling frequency.
-    order = 4;
-    Fc = 40;
-    Fs = 100;
+    % order = 4;
+    % Fc = 40;
+    % Fs = 100;
     [b,a] = butter(order/2,(Fc/(Fs/2)));
-    Sway_data = filtfilt(b,a,accData)./9.81;
+    Sway_data = filtfilt(b,a,accData);%./9.81;
     fullV = ((Sway_data(:,3)).*-1);
     fullML = (Sway_data(:,1));
     fullAP = (Sway_data(:,2));
@@ -17,7 +17,7 @@ function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateW
     Rot_data = [];
 
     % Calibrate using windows of large walking bouts
-    for c = 1:length(fullWindow)
+    for c = 1:height(fullWindow)
         % Take the window of walking bouts
         swayV = fullV(calibrateWindow(c,1):calibrateWindow(c,2));
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
@@ -52,6 +52,5 @@ function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateW
     end
         
     A_data = [actualAP actualML actualVert].*9.81;    
-    
-    %%
+        
 end

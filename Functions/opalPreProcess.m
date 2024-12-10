@@ -83,11 +83,19 @@ function opal = opalPreProcess(subjectnum)
         condition = char(combinedCsv.Condition{c});
     
         switch condition
-            case 'StandOnLeftLeg'
+            case 'StandOnLeftLeg' 
+                order = {'left1','left2'};
+                combinedCsv.Condition{c} = order{LL};
+                LL = LL + 1;
+            case 'standOnLeft' 
                 order = {'left1','left2'};
                 combinedCsv.Condition{c} = order{LL};
                 LL = LL + 1;
             case 'StandOnRightLeg'
+                order = {'right1','right2'};
+                combinedCsv.Condition{c} = order{RR};
+                RR = RR + 1;
+            case 'standOnRight'
                 order = {'right1','right2'};
                 combinedCsv.Condition{c} = order{RR};
                 RR = RR + 1;
@@ -119,6 +127,10 @@ function opal = opalPreProcess(subjectnum)
                 combinedCsv.Condition{c} = {'VMS'};
             case 'One-TIme'
                 combinedCsv.Condition{c} = {'sit2stand'};
+            case 'WalkHeadHori'
+                combinedCsv.Condition{c} = {'gaitHori'};
+            case 'WalkPivotTurn'
+                combinedCsv.Condition{c} = {'gaitPivot'};
         end
     end    
 

@@ -1,0 +1,84 @@
+function segmentAxivityStruct = axivityPreprocess(axivity, timepoint, timeLength)
+
+% The activityPreProcess function is designed to process data from 
+% the Axivity Ax6. It rotates the acceleration vector to 
+% face down so it is consistent with the opal sensors. 
+
+% Input: 
+%     subjectnum: A structure representing information about 
+%     the subject's folder. It is typically obtained using 
+%     the dir function.
+
+% Example input directory structure:
+%     'DHI001'	'C:\Users\chose\DHI\subjects'	'24-Jan-2024 13:24:27'	0	true	739275.558645833
+%     'DHI002'	'C:\Users\chose\DHI\subjects'	'24-Jan-2024 14:22:57'	0	true	739275.599270833
+
+% Output: 
+%     bitium: A structured data format containing preprocessed 
+%     sensor data.
+
+% Example output structure:
+%     axivity."subjectID"."condition"."sensorLocation". "data"
+%     "subjectID" = DHI001
+%     "condition" = i.e., supine2stand, sit2stand
+%     "sensorLocation" = head, sternum, lumbar, timepoint
+%         **IT CONTAINS THE START TIME OF THE TASK!!!!!**
+%     "data" = acc, gyro, time(array of time with length of trial)
+
+
+% By Selena Cho
+% Last Updated: Oct 8th, 2024
+
+    % Convert Axivity Matlab Time to match with Opal time
+    fs = 100;
+    sensor = fieldnames(axivity);
+    task = fieldnames(timepoint);
+
+    for ss = 1:length(sensor)
+        timeArray.(sensor{ss}) = axivity.(sensor{ss})(:,1);
+        axivityDateTime.(sensor{ss}) = datetime(timeArray.(sensor{ss}), 'convertfrom', 'datenum', 'Format', 'HH:mm:ss');
+        axivityStr.(sensor{ss}) = string(axivityDateTime.(sensor{ss}));
+    end
+
+    for tt = 1:length(task)
+        for ss = 1:length(sensor)  
+            % try
+            startTimeStr = string(timepoint.(task{tt}));             
+    
+            % Find the time index
+            matchStartTime = strcmp(axivityStr.(sensor{ss}),startTimeStr);
+            startIndex = find(matchStartTime,1,"first");
+    
+            endTimeStr = string(timepoint.(task{tt})+seconds((timeLength.(task{tt})-1)/100));
+            matchEndTime = strcmp(axivityStr.(sensor{ss}),endTimeStr);
+            endIndex = find(matchEndTime,1,"last");
+
+            % Segment Data
+            acc = axivity.(sensor{ss})(startIndex:endIndex,2:4);
+            gyro = axivity.(sensor{ss})(startIndex:endIndex,5:7);
+
+            fullWindow = [1 length(acc)];
+            calibrateWindow = [1 300];
+            order = 4;
+            Fc = 30;
+            Fs = 100;
+
+            [A_data,Rot_data] = rotateIMU(acc,4,40,100,fullWindow,calibrateWindow);
+            % Rotate Gyroscope
+            [G_data] = rotateGyro(gyro,Rot_data,order,Fc,Fs,fullWindow,calibrateWindow);
+    
+            segmentAxivityStruct.(task{tt}).(sensor{ss}).acc = A_data;
+            segmentAxivityStruct.(task{tt}).(sensor{ss}).gyro = G_data;
+            segmentAxivityStruct.(task{tt}).(sensor{ss}).time = axivity.(sensor{ss})(startIndex:endIndex,1);
+            segmentAxivityStruct.(task{tt}).(sensor{ss}).fs = fs;
+            % catch
+            %     disp(append("Error in ",task{tt}))
+            % end
+
+        end
+    end
+    
+end
+
+
+
