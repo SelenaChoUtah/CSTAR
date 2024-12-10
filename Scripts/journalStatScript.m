@@ -8,9 +8,11 @@
 %     7) Ribbon Plots
 %     8) Number of Turns per hour ICC
 %     9) ICC
+%     10) Comparing t-test on calibration methods
+%     11) Generating Table for LMM
 cd('C:\Users\chose\Box\Digital Health Pilot - Multimodal Sensing')
-addpath('Data\')
-addpath('CSTAR\')
+addpath(genpath('Data\'))
+addpath(genpath('CSTAR\'))
 cd('C:\Users\chose\Box\C-STAR Pilot')
 
 %% 1) Load Data IN
@@ -23,7 +25,6 @@ subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can s
         'SelectionMode','multiple','ListString',{processPath.name}));
 
 % Load Data 
-
 for ii = 1:numel(subjectnum)
     % Save Data into Process
     id = string(subjectnum(ii).name);
@@ -36,7 +37,7 @@ clearvars -except data
 
 %% 2) Head/Neck/Lumbar Turns ---------------------------------------------%
 clearvars placeData
-metrics = {'amplitude','angVelocity','turnDuration'};
+metrics = {'amplitude','angVelocity'};
 
 % go in and extract amp, angVel, number
 id = fieldnames(data);
@@ -45,31 +46,65 @@ for ii = 1:length(id)
     for dd = 1:length(dayNum)
         sensor = fieldnames(data.(id{ii}).turnData.(dayNum{dd}));
         for ss = 1:length(sensor)
-            for mm = 1:length(metrics)                
-                placeData.(sensor{ss}).(metrics{mm}){dd,ii} = mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
-                placeData.(sensor{ss}).frequency{dd,ii} = length(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
+            for mm = 1:length(metrics)
+                if isfield(data.(id{ii}).turnData.(dayNum{dd}), sensor{ss}) && isfield(data.(id{ii}).turnDataCali.(dayNum{dd}), sensor{ss})
+                    placeData.(sensor{ss}).(metrics{mm}){dd,ii} = mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
+                    placeData.(sensor{ss}).frequency{dd,ii} = length(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
+                    placeData2.(sensor{ss}).(metrics{mm}){dd,ii} = mean(data.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
+                    placeData2.(sensor{ss}).frequency{dd,ii} = length(data.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).(metrics{mm}));
+                else
+                    placeData.(sensor{ss}).(metrics{mm}){dd,ii} = [];
+                    placeData.(sensor{ss}).frequency{dd,ii} = [];
+                    placeData2.(sensor{ss}).(metrics{mm}){dd,ii} = [];
+                    placeData2.(sensor{ss}).frequency{dd,ii} = [];
+                end
             end
         end
     end
 end
 
-% Turns per hour
+%% Turns per hour
 id = fieldnames(data);
 for ii = 1:length(id)
     dayNum = fieldnames(data.(id{ii}).turnData);
     for dd = 1:length(dayNum)
+        
         sensor = fieldnames(data.(id{ii}).turnData.(dayNum{dd}));
         for ss = 1:length(sensor)
+            try
             dayLength = data.(id{ii}).timeData.(dayNum{dd}).(sensor{ss}).dayLength;
             numHoursIdx = linspace(1,dayLength,25);
             index = data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).startstop(:,1);
+            index2 = data.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).startstop(:,1);
             for nn = 2:length(numHoursIdx)
                 turnPerHour(nn-1) = length(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn)));
-                % stepsPerHour(nn-1) = 
+                turnPerHour2(nn-1) = length(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn)));
+
+                ampPerHour(nn-1) = mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).amplitude(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn))));
+                ampPerHour2(nn-1) = mean(data.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).amplitude(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn))));
+
+                velPerHour(nn-1) = mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).angVelocity(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn))));
+                velPerHour2(nn-1) = mean(data.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).angVelocity(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn))));
+                if ampPerHour(nn-1) > 360 %|| ampPerHour(nn-1) == 0
+                    ampPerHour(nn-1) = 0;
+                    velPerHour(nn-1) = 0;
+                elseif ampPerHour2(nn-1) > 360 %|| ampPerHour2(nn-1) == 0
+                    ampPerHour2(nn-1) = 0;
+                    velPerHour(nn-1) = 0;
+                end
             end
-            placeData.(sensor{ss}).turnsPerHourMean{dd,ii} = mean(turnPerHour);
-            placeData.(sensor{ss}).turnsPer24hr(:,dd) = turnPerHour';
-            placeData.(sensor{ss}).turnsPerHourSD{dd,ii} = std(turnPerHour);
+            placeData.(sensor{ss}).turnsPerHourMean.(id{ii}){dd,1} = mean(turnPerHour);
+            placeData.(sensor{ss}).turnsPer24hr.(id{ii})(:,dd) = turnPerHour';
+            placeData.(sensor{ss}).ampPer24hr.(id{ii})(:,dd) = ampPerHour';
+            placeData.(sensor{ss}).velPer24hr.(id{ii})(:,dd) = velPerHour';
+            placeData.(sensor{ss}).turnsPerHourSD.(id{ii}){dd,1} = std(turnPerHour);
+            % Cali
+            placeData2.(sensor{ss}).turnsPer24hr.(id{ii})(:,dd) = turnPerHour2';
+            placeData2.(sensor{ss}).ampPer24hr.(id{ii})(:,dd) = ampPerHour2';
+            placeData2.(sensor{ss}).velPer24hr.(id{ii})(:,dd) = velPerHour2';
+            catch
+                disp("no sensor")
+            end
         end
     end
 end
@@ -130,12 +165,16 @@ for ss = 1:length(sensor)
         for dd = 1:length(placeData.(sensor{ss}).(metrics{mm}))
             average(dd) = mean(cell2mat(placeData.(sensor{ss}).(metrics{mm})(:,dd)));
             sd(dd) = std(cell2mat(placeData.(sensor{ss}).(metrics{mm})(:,dd)));
+            average2(dd) = mean(cell2mat(placeData2.(sensor{ss}).(metrics{mm})(:,dd)));
+            sd2(dd) = std(cell2mat(placeData2.(sensor{ss}).(metrics{mm})(:,dd)));
         end
         catch
             disp(append(sensor{ss},metrics{mm}))
         end
         statsMean.(sensor{ss}).(metrics{mm}) = average;
         statsSD.(sensor{ss}).(metrics{mm}) = sd;
+        statsMean2.(sensor{ss}).(metrics{mm}) = average2;
+        statsSD2.(sensor{ss}).(metrics{mm}) = sd2;
     end
 end
 
@@ -242,7 +281,7 @@ for ii = 1:length(id)
     xlim([0 600])
 end
 
-%% 8A) Number of Turns per hour ICC
+%% 8A) Number of Turns per hour ICC --------------------------------------%
 clearvars headCount
 
 % 1) Check for weartime >10 hours based on paper Melissa rec
@@ -277,7 +316,7 @@ for ii = 1:length(id)
     end
 end
 
-%% 8B) Number of Turns per hour ICC
+%% 8B) Number of Turns per hour ICC --------------------------------------%
 clearvars avgHeadKin
 
 % 1) Check for weartime >10 hours based on paper Melissa rec
@@ -314,7 +353,7 @@ for ii = 1:length(id)
     end
 end
 
-%% 9) ICC
+%% 9) ICC ----------------------------------------------------------------%
 
 close all
 avgHeadKin(isnan(avgHeadKin))=0;
@@ -338,6 +377,149 @@ title(taskName)
 xlabel('hour in day')
 ylabel('ICC')
 saveas(gcf,append(taskName,'_icc'),'emf')
+
+%% 10) Comparing t-test on calibration methods ---------------------------%
+
+% create for loop
+% if statement to see if the calibration exists for both days
+metric = 'angVelocity';
+
+[H,P,CI,STATS] = ttest(statsMean.head.(metric), statsMean2.head.(metric))
+
+% % Display the t-statistic and p-value
+% fprintf('t-statistic: %.4f\n', h);
+% fprintf('p-value: %.4f\n', p);
+
+figure
+histogram(statsMean.head.(metric))
+hold on
+histogram(statsMean2.head.(metric))
+
+
+% % Optional: Display the mean difference
+% mean_difference = mean(method1_amplitude - method2_amplitude);
+% fprintf('Mean Difference: %.4f\n', mean_difference);
+
+% t-test for everyday per subject
+
+id = fieldnames(placeData2.head.turnsPer24hr);
+for ii = 1:length(id)
+    [m,n] = size(placeData2.head.turnsPer24hr.(id{ii}));
+    for nn = 1:n
+        [~,pp.(id{ii})(nn,1),CI.(id{ii})(nn,1),tstat.(id{ii})(nn,1)] = ttest(placeData.head.turnsPer24hr.(id{ii})(:,nn), placeData2.head.turnsPer24hr.(id{ii})(:,nn));
+    end
+end
+
+
+%% 11) Generating Table for LMM
+
+% placeData.head.ampPer24hr.S04
+variables = {'ampPer24hr','velPer24hr','turnsPer24hr'};
+
+% Define Table
+varNames = ["id", "day", "hour", "method", "amplitude", "angVelocity", "numOfTurns"];
+compCaliTable = table('Size', [0, length(varNames)], 'VariableTypes', {'string', 'double', 'double', 'double', 'double', 'double', 'double'}, 'VariableNames', varNames);
+
+walkTable = table('Size', [0, length(varNames)], 'VariableTypes', {'string', 'double', 'double', 'double', 'double', 'double', 'double'}, 'VariableNames', varNames);
+
+
+for ii = 1:length(id)
+    [hr,day] = size(placeData.head.ampPer24hr.(id{ii}));
+    for dd = 1:day
+        for hh = 1:hr        
+            if placeData.head.ampPer24hr.(id{ii})(hh,dd) ~= 0 && placeData2.head.ampPer24hr.(id{ii})(hh,dd) ~= 0 && ~isnan(placeData.head.ampPer24hr.(id{ii})(hh,dd)) && ~isnan(placeData2.head.ampPer24hr.(id{ii})(hh,dd))
+                % amplitude = placeData.head.ampPer24hr.(id{ii})(hh,dd);
+                % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                % if abs(amplitude2-amplitude)<20
+                %     angVelocity = placeData.head.velPer24hr.(id{ii})(hh,dd);
+                %     numOfTurns = placeData.head.turnsPer24hr.(id{ii})(hh,dd);
+                %     % method = 1 is walking
+                %     method = 1;
+                %     newRow = table(string(id{ii}), dd, hh, method, amplitude, angVelocity, numOfTurns,'VariableNames', varNames);
+                % 
+                %     % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                %     angVelocity2 = placeData2.head.velPer24hr.(id{ii})(hh,dd);
+                %     numOfTurns2 = placeData2.head.turnsPer24hr.(id{ii})(hh,dd);
+                %     % method = 2 is calibration
+                %     method = 2;
+                %     newRow2 = table(string(id{ii}), dd, hh, method, amplitude2, angVelocity2, numOfTurns2,'VariableNames', varNames);
+                %     compCaliTable = [compCaliTable; newRow; newRow2];
+                %     walkTable = [walkTable; newRow2];
+                % end
+
+                amplitude = placeData.head.ampPer24hr.(id{ii})(hh,dd);
+                angVelocity = placeData.head.velPer24hr.(id{ii})(hh,dd);
+                numOfTurns = placeData.head.turnsPer24hr.(id{ii})(hh,dd);
+                % method = 1 is walking
+                method = 1;
+                newRow = table(string(id{ii}), dd, hh, method, amplitude, angVelocity, numOfTurns,'VariableNames', varNames);
+
+                % amplitude2 = placeData2.head.ampPer24hr.(id{ii})(hh,dd);
+                angVelocity2 = placeData2.head.velPer24hr.(id{ii})(hh,dd);
+                numOfTurns2 = placeData2.head.turnsPer24hr.(id{ii})(hh,dd);
+                % method = 2 is calibration
+                method = 2;
+                newRow2 = table(string(id{ii}), dd, hh, method, amplitude2, angVelocity2, numOfTurns2,'VariableNames', varNames);
+                compCaliTable = [compCaliTable; newRow; newRow2];
+                walkTable = [walkTable; newRow2];
+                
+            end
+        end
+    end
+end
+%%
+compCaliTableCat.id = compCaliTable.id;
+compCaliTableCat.day = categorical(compCaliTable.day);
+compCaliTableCat.hour = categorical(compCaliTable.hour);
+compCaliTableCat.method = categorical(compCaliTable.method);
+compCaliTableCat.amplitude = compCaliTable.amplitude;
+compCaliTableCat.angVelocity = compCaliTable.angVelocity;
+compCaliTableCat.numOfTurns = compCaliTable.numOfTurns;
+
+compCaliTableCat = struct2table(compCaliTableCat);
+%% fitlme for methods
+
+% Model for amplitude with fixed effect of method and random effects for day and hour nested by ID
+lmeAmplitude = fitlme(compCaliTable, ...
+    'amplitude ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Model for angVelocity
+lmeAngVelocity = fitlme(compCaliTable, ...
+    'angVelocity ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Model for numOfTurns
+lmeNumOfTurns = fitlme(compCaliTable, ...
+    'numOfTurns ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Display summaries of each model
+disp('Amplitude Model Summary:')
+disp(lmeAmplitude)
+
+disp('AngVelocity Model Summary:')
+disp(lmeAngVelocity)
+
+disp('NumOfTurns Model Summary:')
+disp(lmeNumOfTurns)
+
+
+%% Scatterplots
+
+figure
+hold on
+nexttile
+scatter(compCaliTable.amplitude(compCaliTable.method==1),compCaliTable.amplitude(compCaliTable.method==2))
+title("amplitude")
+nexttile
+scatter(compCaliTable.angVelocity(compCaliTable.method==1),compCaliTable.angVelocity(compCaliTable.method==2))
+title("angVelocity")
+nexttile
+scatter(compCaliTable.numOfTurns(compCaliTable.method==1),compCaliTable.numOfTurns(compCaliTable.method==2))
+title("numOfTurns")
+
+
+
+
+
 
 %% Find the awake periods
 
