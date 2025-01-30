@@ -145,43 +145,34 @@ for i = 1:numel(subjectnum)
             end
         end        
         
-        % Save 
-        try
-            subIDFold = strcat(currentFoldPath,'\Data\Process\', id,filesep);
-            if ~isfolder(subIDFold)
-                mkdir(subIDFold)
-            end
-            savePath = strcat(subIDFold,'data.mat');
-            save(savePath, '-struct','saveData');
-        catch
-            disp('didnt save')
-        end
+        % % Save 
+        % try
+        %     subIDFold = strcat(currentFoldPath,'\Data\Process\', id,filesep);
+        %     if ~isfolder(subIDFold)
+        %         mkdir(subIDFold)
+        %     end
+        %     savePath = strcat(subIDFold,'data.mat');
+        %     save(savePath, '-struct','saveData');
+        % catch
+        %     disp('didnt save')
+        % end
 
     catch
         disp(append('Error with Subject: ', id))
     end
 end
 
-%%
-clc
-figure
-for d = 1:length(daynum)
-    nexttile
-    plot(saveData.timeData.(daynum{d}).head.activityCounts)
-    title(num2str(d))
-    disp(saveData.timeData.(daynum{d}).head.nonwearTime)
+%% 24 hour data
+
+
+%% Ribbon Plots
+
+dayNum = fieldnames(saveData.turnData);
+
+for dd = 1:length(dayNum)
+    headTurnNum(dd,1) = length(saveData.turnData.(dayNum{dd}).head.amplitude);
 end
 
-%%
-figure
-hold on
-plot(gyro)
-plot(gyro2)
-%%
-figure
-hold on
-plot(saveData.turnDataCali.day7.waist.amplitude,saveData.turnDataCali.day7.waist.angVelocity,'*')
-plot(saveData.turnData.day7.waist.amplitude,saveData.turnData.day7.waist.angVelocity,'*')
 
-figure
-plot(saveData.turnDataCali.day7.waist.amplitude,saveData.turnData.day7.waist.amplitude,'*')
+%% Pulling Filter Plot
+
