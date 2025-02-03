@@ -1,0 +1,198 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%     Script for Melissa Cortez's R01 grant 
+%     This script analyzes IMU and bittium data for all
+%     of the entropy stuff. 
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+addpath(genpath(pwd))
+
+%% subject path
+currentPath = fullfile(cd,'Data');
+segmentedBittiumPath = fullfile(currentPath,'preprocess','segmentedBittium');
+bittiumFolder = dir(segmentedBittiumPath);
+bittiumFolder = bittiumFolder(~ismember({bittiumFolder.name}, {'.', '..'}));
+
+opalPath = fullfile(currentPath,'preprocess','opal');
+opalFolder = dir(opalPath);
+opalFolder = opalFolder(~ismember({opalFolder.name},{'.','..'}));
+
+polarPath = fullfile(currentPath,'preprocess','segmentedPolar');
+polarFolder = dir(polarPath);
+polarFolder = polarFolder(~ismember({polarFolder.name},{'.','..'}));
+
+% What data to load 
+answer = questdlg('Do you want to load all data', ...
+	'Loading Data', 'Yes', 'Select Subjects','bye');
+
+switch answer
+    case 'Yes'
+        bittium = [];
+        for i = 1:length(bittiumFolder)
+            % Loading Bittium Folder
+            [~,name,~] = fileparts(bittiumFolder(i).name);
+            bittium.(name) = load([bittiumFolder(i).folder filesep bittiumFolder(i).name filesep 'data.mat']);
+            % Loading Opal Data
+            [~,name,~] = fileparts(opalFolder(i).name);
+            opal.(name) = load([opalFolder(i).folder filesep opalFolder(i).name filesep 'data.mat']);
+            % % Loading Polar Data
+            % [~,name,~] = fileparts(polarFolder(i).name);
+            % polar.(name) = load([polarFolder(i).folder filesep polarFolder(i).name filesep 'data.mat']);
+        end
+    case 'Select Subjects'
+        subID = listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{bittiumFolder.name});
+        select = bittiumFolder(subID);
+        opalSelect = opalFolder(subID);
+        for i = 1:length(select)
+            [~,name,~] = fileparts(select(i).name);
+            % Loading Bittium Data
+            data = load([select(i).folder filesep select(i).name]);
+            bittium.(name) = data.(name);
+            % Loading Opal Data
+            data = load([opalSelect(i).folder filesep opalSelect(i).name]);
+            opal.(name) = data.(name);
+        end
+end
+
+% clearvars -except opal bittium polar
+
+%% Tasks of Interests
+
+% Allocating another structure of interests
+subjects = fieldnames(bittium);
+tasks = fieldnames(bittium.(subjects{1}));
+select = tasks(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',fieldnames(bittium.(subjects{1}))));
+
+for ss = 1:length(subjects)
+    for tt = 1:length(select)
+        interest.(subjects{ss}).(select{tt}) = bittium.(subjects{ss}).(select{tt});
+        fn = fieldnames(opal.(subjects{ss}).(select{tt}));
+        for ff = 1:length(fn)
+            interest.(subjects{ss}).(select{tt}).(fn{ff}) = opal.(subjects{ss}).(select{tt}).(fn{ff});
+        end
+    end
+end
+
+clearvars -except interest bittium opal polar currentPath
+
+%% Physionet - turn data into *.dat files
+original = pwd;
+subjects = fieldnames(interest);
+for s = 1:length(subjects)
+    recordName = subjects{s};
+    folderName = fullfile(currentPath,'physionetFormat');
+    folderVariable = 'YOYO';
+    fs = interest.(subjects{s}).(folderVariable).fsEcg;
+    ecgData = interest.(subjects{s}).Buffalo.ecg;
+    turnDatFile(recordName,fs,ecgData,folderName,folderVariable)
+end
+cd(original)
+
+%% Pull out the ECG markers and save to struct with everyone
+
+for ss = 1:length(subjects)    
+    folderName = fullfile(currentPath,'physionetFormat');
+    folderVariable = 'YOYO';
+    filename = dir(fullfile(folderName, folderVariable, subjects{ss}, '*.mat'));
+    ecg.(folderVariable).(subjects{ss}) = load(fullfile(filename.folder, filename.name));
+end
+
+
+%% figure to check how well R peaks are detected
+
+folderVariable = 'Buffalo';
+
+figure
+tiledlayout('flow')
+for ss = 1:length(subjects)
+    nexttile
+    plot(ecg.(folderVariable).(subjects{ss}).time, ecg.(folderVariable).(subjects{ss}).signal)
+    hold on 
+    plot(ecg.(folderVariable).(subjects{ss}).time(ecg.(folderVariable).(subjects{ss}).ann), ecg.(folderVariable).(subjects{ss}).signal(ecg.(folderVariable).(subjects{ss}).ann),'*')
+    title(subjects{ss})
+end
+
+%% Cross-Fuzzy Entropy
+
+% concuss = [0;0;1;0;0;0;2;2;2];
+folderVariable = 'Buffalo';
+
+for ss = 1%:length(subjects)
+    irregularTime = [];
+    uniform = [];
+
+    hrData = ecg.(folderVariable).(subjects{ss}).heartRate;
+    irregularTime = ecg.(folderVariable).(subjects{ss}).hrTime;
+
+    uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
+    uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
+
+    newEcg = resample(uniformHrData,10,2);
+    newAcc = resample(detrend(interest.(subjects{ss}).(folderVariable).head.acc),10,100); 
+
+    for j = 1:3
+        CFEnBCTT(i,j) = CFuzzyEn(newAcc(:,j),newEcg);
+    end
+end
+
+%%
+for i = 1:length(subjects)
+    irregularTime = [];
+    uniform = [];
+    hrData = buffaloTask.(subjects{i}).heartRate;
+    irregularTime(:,1) = buffaloTask.(subjects{i}).hrTime;
+    uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
+    uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
+    buffaloTask.(subjects{i}).newFs = 1/mean(diff(uniform));
+
+    newEcg = resample(uniformHrData,10,2);
+    newAcc = resample(detrend(interest.(subjects{i}).(folderVariable).head.acc),10,100); 
+    
+    for j = 1:3
+        CFEnBCTT(i,j) = CFuzzyEn(newAcc(:,j),newEcg);
+    end
+
+end
+
+
+
+%%
+original = pwd;
+for i = 1%:length(subjects)
+    cd(original)
+    folderName = fullfile(currentPath,'physionetFormat');
+    folderVariable = 'YOYO';
+    figure
+    % figure
+    plot(tm,signal(:,1));hold on;grid on
+    plot(tm(ann),signal(ann,1),'ro')
+
+    % cd(fullfile(folderName,folderVariable,subjects{i}))
+    % recordName = [subjects{i}, '.dat'];
+    % [signal, ~, tm] = rdsamp(recordName);
+    % N = length(signal);
+    % ann = rdann(recordName,'wqrs',[],N);
+    % buffaloTask.(subjects{i}).rrIntervals = ann;
+    % fs = interest.(subjects{s}).(folderVariable).fs;
+    % [heartRate, time] = rr2bpm(ann, fs);
+    % buffaloTask.(subjects{i}).heartRate = heartRate;
+    % buffaloTask.(subjects{i}).hrTime = time;
+
+    plot(tm,signal(:,1));hold on;grid on
+    plot(tm(ann),signal(ann,1),'ro')
+    % bpm = rr2bpm(diff(ann));
+    % plot(bpm)
+    % % Plot the heart rate
+    % plot(time/60,heartRate);
+    % % plot(time, heartRate, '-o');
+    % xlabel('Time (min)');
+    % ylabel('Heart Rate (beats per minute)');
+    % title(string(subjects{i}));
+    % axis tight
+    % grid on;
+    % ylim([60 200])
+end
+

@@ -141,7 +141,7 @@ function opal = opalPreProcess(subjectnum)
 
     for t = 1:height(combinedCsv)
         % Convert datetime to hours:minutes:seconds
-        if startsWith('MDT',combinedCsv.(string(idx)){t}(end-2:end))
+        if startsWith('MDT',combinedCsv.(string(idx)){t}(end-2:end)) || startsWith('MST',combinedCsv.(string(idx)){t}(end-2:end))
             time = datetime({combinedCsv.(string(idx)){t}(1:15)}, 'InputFormat', 'yyyyMMdd-HHmmss','TimeZone','America/Denver','Format','HH:mm:ss');
             opal.(string(combinedCsv.Condition(t))).timepoint = time;
         else
