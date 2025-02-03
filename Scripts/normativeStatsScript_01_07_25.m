@@ -1,0 +1,521 @@
+cd('C:\Users\chose\Box\C-STAR Pilot')
+% cd("C:\Users\chose\Box\C-STAR Pilot")
+addpath(genpath('Data\'))
+addpath(genpath('CSTAR\'))
+
+%% Everyone's data in one
+currentFoldPath = cd;
+
+processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
+processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name}));
+
+% Load Data 
+for ii = 1:numel(subjectnum)
+    % Save Data into Process
+    id = string(subjectnum(ii).name);
+    % disp(id)   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+end
+
+%% Remove turns greater than 360 bc not common
+
+id = fieldnames(data);
+for ii = 1:length(id)
+    day = fieldnames(data.(id{ii}).turnData);
+    
+    for dd = 1:length(day)
+        sensor = fieldnames(data.(id{ii}).turnData.(day{dd}));
+        for ss = 1:length(sensor)
+            aa = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>360);
+            data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(aa) = [];
+            data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(aa) = [];
+            data.(id{ii}).turnData.(day{dd}).(sensor{ss}).startstop(aa,:) = [];
+        end
+    end
+end
+
+%% Individual Day metrics compiled
+
+sensor = {'head','neck','waist'};
+for ss = 3%1:length(sensor)
+    stats.indiAmp = [];
+    stats.indiVel = [];
+    
+    % Amplitude
+    stats.indismallTurnAmp = [];
+    stats.indilargeTurnAmp = [];
+    
+    % Percent of small vs large turns
+    stats.indinumsmallTurn = [];
+    stats.indinumlargeTurn = [];
+    
+    % Speed
+    stats.indismallTurnVel = [];
+    stats.indilargeTurnVel = [];
+    
+    % Quantity
+    stats.indinumOfTurns = [];
+    stats.indistepCount = [];
+
+    id = fieldnames(data);
+    for ii = 1:length(id)
+        day = fieldnames(data.(id{ii}).turnData);
+        
+        for dd = 1:length(day)
+            try
+            if length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude) > 1000 && data.(id{ii}).stepData.(day{dd}).waist.stepCount > 1000
+                idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
+                idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
+        
+                % small v large
+                smallTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+                largeTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+                % ang Velocity
+                smallTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+                largeTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+        
+                % number of turns and steps
+                numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+                stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+        
+                numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+                numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+        
+                % mean of turns
+                ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+                meanAmp(dd) = mean(ampData);
+                % angular velocity
+                velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
+                meanVel(dd) = mean(velData);
+        
+                % Median of the Turns
+                allAmp(dd) = median(ampData);
+                allVel(dd) = median(velData);
+            end
+    
+            catch
+            end
+        end
+        
+        % All Turns
+        stats.indiAmp = [stats.indiAmp; nonzeros(meanAmp)];
+        stats.indiVel = [stats.indiVel; nonzeros(meanVel)];
+    
+        % Amplitude
+        stats.indismallTurnAmp = [stats.indismallTurnAmp; nonzeros(smallTurnAmp)];
+        stats.indilargeTurnAmp = [stats.indilargeTurnAmp; nonzeros(largeTurnAmp)];
+    
+        % Percent of small v large turns
+        stats.indinumsmallTurn = [stats.indinumsmallTurn; round(nonzeros(numsmallTurn))];
+        stats.indinumlargeTurn = [stats.indinumlargeTurn; round(nonzeros(numlargeTurn))];
+    
+        % Speed
+        stats.indismallTurnVel = [stats.indismallTurnVel; nonzeros(smallTurnVel)];
+        stats.indilargeTurnVel = [stats.indilargeTurnVel; nonzeros(largeTurnVel)];
+    
+        % Quantity
+        stats.indinumOfTurns = [stats.indinumOfTurns; round(nonzeros(numOfTurns))];
+        stats.indistepCount = [stats.indistepCount; round(nonzeros(stepCount))];             
+    end
+    
+    % Generalized data into Table
+    variIndi = table(fieldnames(stats));
+    
+    vars = fieldnames(stats);
+    for vv = 1:length(vars)
+        minimum = min(stats.(vars{vv}));
+        maximum = max(stats.(vars{vv}));
+        % cv = stdev./average;
+        
+        variIndi(vv,2) = array2table(minimum);
+        variIndi(vv,3) = array2table(maximum);    
+        % variables(vv,4) = array2table(cv);
+    end  
+    
+    filename = 'turnStatIndividual.xlsx';
+    writetable(variIndi,filename,'Sheet',sensor{ss})
+end
+
+%% mean
+
+clearvars stat variables
+
+sensor = {'head','neck','waist'};
+for ss = 1%:length(sensor)
+    id = fieldnames(data);
+    for ii = 16%1:length(id)
+        day = fieldnames(data.(id{ii}).turnData);
+        
+        for dd = 1:length(day)
+            try
+            idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
+            idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
+    
+            % small v large
+            smallTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            largeTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+            % ang Velocity
+            smallTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+            largeTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+    
+            % number of turns and steps
+            numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+    
+            numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+    
+            % mean of turns
+            ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            meanAmp(dd) = mean(ampData);
+            % angular velocity
+            velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
+            meanVel(dd) = mean(velData);
+    
+            % Median of the Turns
+            allAmp(dd) = median(ampData);
+            allVel(dd) = median(velData);
+    
+            catch
+            end
+        end
+        
+        % All Turns
+        stat.meanAmp(ii) = mean(nonzeros(meanAmp));
+        stat.meanVel(ii) = mean(nonzeros(meanVel));
+    
+        % Amplitude
+        stat.meansmallTurnAmp(ii) = mean(nonzeros(smallTurnAmp));
+        stat.meanlargeTurnAmp(ii) = mean(nonzeros(largeTurnAmp));
+    
+        % Percent of small v large turns
+        stat.meannumsmallTurn(ii) = round(mean(numsmallTurn));
+        stat.meannumlargeTurn(ii) = round(mean(numlargeTurn));
+    
+        % Speed
+        stat.meansmallTurnVel(ii) = mean(nonzeros(smallTurnVel));
+        stat.meanlargeTurnVel(ii) = mean(nonzeros(largeTurnVel));
+    
+        % Quantity
+        stat.meannumOfTurns(ii) = round(mean(nonzeros(numOfTurns)));
+        stat.meanstepCount(ii) = round(mean(nonzeros(stepCount)));    
+    
+        % Median
+        stat.medallAmp(ii) = median(nonzeros(allAmp));
+        stat.medallVel(ii) = median(nonzeros(allVel));
+        
+    end
+    
+    % median
+    id = fieldnames(data);
+    for ii = 1:length(id)
+        day = fieldnames(data.(id{ii}).turnData);
+        
+        for dd = 1:length(day)
+            try
+            % number of turns and steps
+            numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+
+            idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude < 45);
+            idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude > 45);
+    
+            smallTurnAmp(dd) = median(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            largeTurnAmp(dd) = median(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+            smallnumOfTurns(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            largenumOfTurns(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+            % ang Velocity
+            smallTurnVel(dd) = median(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+            largeTurnVel(dd) = median(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+            catch
+                % disp([ii,"day ",dd])
+            end
+        end
+        stat.medsmallTurnAmp(ii) = median(nonzeros(smallTurnAmp));
+        stat.medlargeTurnAmp(ii) = median(nonzeros(largeTurnAmp));
+        stat.medsmallTurns(ii) = round(median(nonzeros(smallnumOfTurns)));
+        stat.medlargeTurns(ii) = round(median(nonzeros(largenumOfTurns)));
+        stat.medsmallTurnVel(ii) = median(nonzeros(smallTurnVel));
+        stat.medlargeTurnVel(ii) = median(nonzeros(largeTurnVel));
+        stat.mednumOfTurns(ii) = round(median(nonzeros(numOfTurns)));
+        stat.medstepCount(ii) = round(median(nonzeros(stepCount))); 
+             
+        
+    end
+    
+    % StDev
+    id = fieldnames(data);
+    for ii = 1:length(id)
+        day = fieldnames(data.(id{ii}).turnData);
+        
+        for dd = 1:length(day)
+            try
+            idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
+            idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
+    
+            % small v large
+            smallTurnAmp(dd) = std(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            largeTurnAmp(dd) = std(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+            % ang Velocity
+            smallTurnVel(dd) = std(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+            largeTurnVel(dd) = std(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+    
+            % number of turns and steps
+            numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+    
+            numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+    
+            % std of turns
+            ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            stdAmp(dd) = std(ampData);
+    
+            % angular velocity
+            velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
+            stdVel(dd) = std(velData);
+    
+            % Median of the Turns
+            allAmp(dd) = median(ampData);
+            allVel(dd) = median(velData);
+    
+            catch
+            end
+        end
+        
+        % All Turns
+        stat.stdAmp(ii) = mean(nonzeros(stdAmp));
+        stat.stdVel(ii) = mean(nonzeros(stdVel));
+    
+        % Amplitude
+        stat.stdsSmallTurnAmp(ii) = mean(nonzeros(smallTurnAmp));
+        stat.stdsLargeTurnAmp(ii) = mean(nonzeros(largeTurnAmp));
+    
+        % Percent of small v large turns
+        stat.stdnumsmallTurn(ii) = std(numsmallTurn);
+        stat.stdnumlargeTurn(ii) = std(numlargeTurn);
+    
+        % Speed
+        stat.stdsSmallTurnVel(ii) = mean(nonzeros(smallTurnVel));
+        stat.stdsLargeTurnVel(ii) = mean(nonzeros(largeTurnVel));
+    
+        % Quantity
+        stat.stdNumOfTurns(ii) = std(nonzeros(numOfTurns));
+        stat.stdstepCount(ii) = std(nonzeros(stepCount));    
+    
+        
+    end
+    
+    
+    % IQR
+    id = fieldnames(data);
+    for ii = 1:length(id)
+        day = fieldnames(data.(id{ii}).turnData);
+        
+        for dd = 1:length(day)
+            try
+            idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
+            idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
+    
+            % small v large
+            smallTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            largeTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+            % ang Velocity
+            smallTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+            largeTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+    
+            % number of turns and steps
+            numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+    
+            numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+            numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+    
+            % mean of turns
+            ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+            meanAmp(dd) = mean(ampData);
+            % angular velocity
+            velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
+            meanVel(dd) = mean(velData);
+    
+            % Median of the Turns
+            allAmp(dd) = median(ampData);
+            allVel(dd) = median(velData);
+    
+            catch
+            end
+        end
+        
+        % All Turns
+        stat.iqrAmp(ii,:) = prctile(nonzeros(meanAmp),[25 75],"all")';
+        stat.iqrVel(ii,:) = prctile(nonzeros(meanVel),[25 75],"all")';
+    
+        % Amplitude
+        stat.iqrsmallTurnAmp(ii,:) = prctile(nonzeros(smallTurnAmp),[25 75],"all")';
+        stat.iqrlargeTurnAmp(ii,:) = prctile(nonzeros(largeTurnAmp),[25 75],"all")';
+    
+        % Percent of small v large turns
+        stat.iqrnumsmallTurn(ii,:) = round(prctile(numsmallTurn,[25 75],"all"))';
+        stat.iqrnumlargeTurn(ii,:) = round(prctile(numlargeTurn,[25 75],"all"))';
+    
+        % Speed
+        stat.iqrsmallTurnVel(ii,:) = prctile(nonzeros(smallTurnVel),[25 75],"all")';
+        stat.iqrlargeTurnVel(ii,:) = prctile(nonzeros(largeTurnVel),[25 75],"all")';
+    
+        % Quantity
+        stat.iqrnumOfTurns(ii,:) = round(prctile(nonzeros(numOfTurns),[25 75],"all"))';
+        stat.iqrstepCount(ii,:) = round(prctile(nonzeros(stepCount),[25 75],"all"))';    
+        
+    end
+    
+    
+    % Generalized data into Table
+    variables = table(fieldnames(stat));
+    
+    vars = fieldnames(stat);
+    for vv = 1:length(vars)-10
+        average = mean(stat.(vars{vv}));
+        stdev = std(stat.(vars{vv}));
+        % cv = stdev./average;
+        
+        variables(vv,2) = array2table(average);
+        variables(vv,3) = array2table(stdev);    
+        % variables(vv,4) = array2table(cv);
+    end  
+    
+    for vv = 29:length(vars)
+        average = mean(stat.(vars{vv}));
+        % stdev = std(stat.(vars{vv}),:);
+        % cv = stdev./average;
+        
+        variables(vv,2:3) = array2table(average);
+        % variables(vv,3) = array2table(stdev);    
+        % variables(vv,4) = array2table(cv);
+    end  
+    filename = 'turnStates.xlsx';
+    writetable(variables,filename,'Sheet',sensor{ss})
+end
+
+
+%% CV Table
+
+vars = fieldnames(stat);
+cvTable = table(vars(1:10));
+
+for vv = 1:10
+    average = mean(stat.(vars{vv}));
+    stdev = std(stat.(vars{vv}));
+    cv = mean(stat.(vars{vv+18})./ stat.(vars{vv}));
+    cvStD = std(stat.(vars{vv+18})./ stat.(vars{vv}));    
+
+    cvTable(vv,2) = array2table(cv);
+    cvTable(vv,3) = array2table(cvStD);
+end  
+
+%% Turns per hour
+id = fieldnames(saveData);
+for ii = 1:length(id)
+    dayNum = fieldnames(saveData.(id{ii}).turnData);
+    for dd = 1:length(dayNum)
+        
+        sensor{ss} = fieldnames(saveData.(id{ii}).turnData.(dayNum{dd}));
+        for ss = 1:length(sensor)
+            try
+            dayLength = saveData.(id{ii}).timeData.(dayNum{dd}).(sensor{ss}).dayLength;
+            numHoursIdx = linspace(1,dayLength,25);
+            index = saveData.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).startstop(:,1);
+            index2 = saveData.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).startstop(:,1);
+            for nn = 2:length(numHoursIdx)
+                turnPerHour(nn-1) = length(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn)));
+                turnPerHour2(nn-1) = length(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn)));
+
+                ampPerHour(nn-1) = mean(saveData.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).amplitude(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn))));
+                ampPerHour2(nn-1) = mean(saveData.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).amplitude(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn))));
+
+                velPerHour(nn-1) = mean(saveData.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).angVelocity(find(index>numHoursIdx(nn-1) & index<numHoursIdx(nn))));
+                velPerHour2(nn-1) = mean(saveData.(id{ii}).turnDataCali.(dayNum{dd}).(sensor{ss}).angVelocity(find(index2>numHoursIdx(nn-1) & index2<numHoursIdx(nn))));
+                if ampPerHour(nn-1) > 360 %|| ampPerHour(nn-1) == 0
+                    ampPerHour(nn-1) = 0;
+                    velPerHour(nn-1) = 0;
+                elseif ampPerHour2(nn-1) > 360 %|| ampPerHour2(nn-1) == 0
+                    ampPerHour2(nn-1) = 0;
+                    velPerHour(nn-1) = 0;
+                end
+            end
+            placeData.(sensor{ss}).turnsPerHourMean.(id{ii}){dd,1} = mean(turnPerHour);
+            placeData.(sensor{ss}).turnsPer24hr.(id{ii})(:,dd) = turnPerHour';
+            placeData.(sensor{ss}).ampPer24hr.(id{ii})(:,dd) = ampPerHour';
+            placeData.(sensor{ss}).velPer24hr.(id{ii})(:,dd) = velPerHour';
+            placeData.(sensor{ss}).turnsPerHourSD.(id{ii}){dd,1} = std(turnPerHour);
+            % Cali
+            placeData2.(sensor{ss}).turnsPer24hr.(id{ii})(:,dd) = turnPerHour2';
+            placeData2.(sensor{ss}).ampPer24hr.(id{ii})(:,dd) = ampPerHour2';
+            placeData2.(sensor{ss}).velPer24hr.(id{ii})(:,dd) = velPerHour2';
+            catch
+                disp("no sensor")
+            end
+        end
+    end
+end
+
+%% Ribbon Plots
+
+% Rows: Hours (1 to 24), Columns: Days (Monday to Sunday)
+(sensor)Turns = rand(24, 7) * 50; % Replace with your actual data
+
+% Define Axes
+hours = 1:24;          % Hours of the day
+days = {'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'};
+
+% Create the Ribbon Plot
+figure;
+ribbon(hours, (sensor)Turns);
+
+% Customize the Axes and Labels
+xticks(1:7);                     % Set x-axis ticks for days
+xticklabels(days);               % Replace x-axis ticks with day names
+xlabel('Day of the Week');       
+ylabel('Hour of the Day');
+zlabel('(sensor) Turns');
+title('3D Ribbon Plot: (sensor) Turns by Hour and Day');
+
+% Enhance Visuals
+colormap(jet);                   % Apply a colormap
+grid on;
+view([-45, 30]);   
+
+%% 10) Comparing t-test on calibration methods ---------------------------%
+
+% create for loop
+% if statement to see if the calibration exists for both days
+metric = 'angVelocity';
+
+[H,P,CI,STATS] = ttest(statsMean.head.(metric), statsMean2.head.(metric))
+
+% % Display the t-statistic and p-value
+% fprintf('t-statistic: %.4f\n', h);
+% fprintf('p-value: %.4f\n', p);
+
+figure
+histogram(statsMean.head.(metric))
+hold on
+histogram(statsMean2.head.(metric))
+
+
+% % Optional: Display the mean difference
+% mean_difference = mean(method1_amplitude - method2_amplitude);
+% fprintf('Mean Difference: %.4f\n', mean_difference);
+
+% t-test for everyday per subject
+
+id = fieldnames(placeData2.head.turnsPer24hr);
+for ii = 1:length(id)
+    [m,n] = size(placeData2.head.turnsPer24hr.(id{ii}));
+    for nn = 1:n
+        [~,pp.(id{ii})(nn,1),CI.(id{ii})(nn,1),tstat.(id{ii})(nn,1)] = ttest(placeData.head.turnsPer24hr.(id{ii})(:,nn), placeData2.head.turnsPer24hr.(id{ii})(:,nn));
+    end
+end
+
+

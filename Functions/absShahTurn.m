@@ -98,7 +98,7 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
     end 
 
     % Get rid of turns below amplitude threshold
-    rindx = find(amplitude>amplitudeThreshold);
+    rindx = find(amplitude>amplitudeThreshold & amplitude<400);
     validAmp = amplitude(rindx);
     validAngVel = maxAngVel(rindx);
     stsp = mergeStartStop(rindx,:);

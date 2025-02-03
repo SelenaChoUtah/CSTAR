@@ -16,9 +16,8 @@ addpath('CSTAR\')
 
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
-currentFoldPath = cd;
-% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
-normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+% currentFoldPath = cd;
+normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
@@ -26,7 +25,7 @@ normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '.
 % Which Subject to preprocess
 subjectnum = normativeFolder(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
         'SelectionMode','multiple','ListString',{normativeFolder.name}));
-
+help max
 
 for ss = 1:length(subjectnum)
     disp(append("Subject ", subjectnum(ss).name))
