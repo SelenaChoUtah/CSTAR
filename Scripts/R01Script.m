@@ -84,10 +84,11 @@ subjects = fieldnames(interest);
 for s = 1:length(subjects)
     recordName = subjects{s};
     folderName = fullfile(currentPath,'physionetFormat');
-    folderVariable = 'YOYO';
-    fs = interest.(subjects{s}).(folderVariable).fsEcg;
-    ecgData = interest.(subjects{s}).Buffalo.ecg;
-    turnDatFile(recordName,fs,ecgData,folderName,folderVariable)
+    for ff = 1:length(folderVariable)
+        fs = interest.(subjects{s}).(folderVariable{ff}).fsEcg;
+        ecgData = interest.(subjects{s}).Buffalo.ecg;
+        turnDatFile(recordName,fs,ecgData,folderName,folderVariable{ff})
+    end
 end
 cd(original)
 
@@ -95,9 +96,12 @@ cd(original)
 
 for ss = 1:length(subjects)    
     folderName = fullfile(currentPath,'physionetFormat');
-    folderVariable = 'YOYO';
-    filename = dir(fullfile(folderName, folderVariable, subjects{ss}, '*.mat'));
-    ecg.(folderVariable).(subjects{ss}) = load(fullfile(filename.folder, filename.name));
+    folderVariable = fieldnames(interest.(subjects{ss}));
+    for ff = 1:length(folderVariable)
+    % folderVariable = 'YOYO';
+        filename = dir(fullfile(folderName, folderVariable{ff}, subjects{ss}, '*.mat'));
+        ecg.(folderVariable{ff}).(subjects{ss}) = load(fullfile(filename.folder, filename.name));
+    end
 end
 
 
@@ -117,82 +121,152 @@ end
 
 %% Cross-Fuzzy Entropy
 
-% concuss = [0;0;1;0;0;0;2;2;2];
-folderVariable = 'Buffalo';
-
-for ss = 1%:length(subjects)
-    irregularTime = [];
-    uniform = [];
-
-    hrData = ecg.(folderVariable).(subjects{ss}).heartRate;
-    irregularTime = ecg.(folderVariable).(subjects{ss}).hrTime;
-
-    uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
-    uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
-
-    newEcg = resample(uniformHrData,10,2);
-    newAcc = resample(detrend(interest.(subjects{ss}).(folderVariable).head.acc),10,100); 
-
-    for j = 1:3
-        CFEnBCTT(i,j) = CFuzzyEn(newAcc(:,j),newEcg);
-    end
-end
-
-%%
-for i = 1:length(subjects)
-    irregularTime = [];
-    uniform = [];
-    hrData = buffaloTask.(subjects{i}).heartRate;
-    irregularTime(:,1) = buffaloTask.(subjects{i}).hrTime;
-    uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
-    uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
-    buffaloTask.(subjects{i}).newFs = 1/mean(diff(uniform));
-
-    newEcg = resample(uniformHrData,10,2);
-    newAcc = resample(detrend(interest.(subjects{i}).(folderVariable).head.acc),10,100); 
+folderVariable = fieldnames(interest.(subjects{ss}));
+for ff = 1:length(folderVariable)
+    for ss = 1:length(subjects)    
+        irregularTime = [];
+        uniform = [];
     
-    for j = 1:3
-        CFEnBCTT(i,j) = CFuzzyEn(newAcc(:,j),newEcg);
+        hrData = ecg.(folderVariable{ff}).(subjects{ss}).heartRate;
+        irregularTime = ecg.(folderVariable{ff}).(subjects{ss}).hrTime;
+    
+        uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
+        uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
+    
+        newEcg = resample(uniformHrData,10,2);
+        newAcc = resample(interest.(subjects{ss}).(folderVariable{ff}).head.acc,10,100); 
+    
+        for j = 1:3
+            CFEnBCTT(ss,j) = CFuzzyEn(newAcc(:,j),newEcg);
+        end
     end
-
+    crossFuzzyStat.(folderVariable{ff}) = CFEnBCTT;
 end
 
+%% Plotting for CFuzzyEN
+close all
+% 0 - healthy control
+% 1 - exercise tolerant
+% 2 - exercise intolerant
+subInfo = readtable("subjectInfo.xlsx");
+
+accTitle = string({'AP','ML','Vert'});
+for ff = 1:length(folderVariable)
+    figure
+    for i = 1:3
+        nexttile
+        scatter(subInfo.Type(1:length(crossFuzzyStat.(folderVariable{ff}))),crossFuzzyStat.(folderVariable{ff})(:,i))
+        title(append("CrossFuzEN ",folderVariable{ff},accTitle(i)))
+        xlim([-1 2])
+        % ylim([0.7 2.5])
+    end
+end
+
+%% Cross-Fuzzy Entropy for Resultant Acc
+
+folderVariable = fieldnames(interest.(subjects{ss}));
+for ff = 1:length(folderVariable)
+    for ss = 1:length(subjects)    
+        irregularTime = [];
+        uniform = [];
+    
+        hrData = ecg.(folderVariable{ff}).(subjects{ss}).heartRate;
+        irregularTime = ecg.(folderVariable{ff}).(subjects{ss}).hrTime;
+    
+        uniform(:,1) = linspace(0, max(irregularTime),length(irregularTime));
+        uniformHrData = interp1(irregularTime, hrData, uniform, 'spline');
+    
+        newEcg = resample(uniformHrData,10,2);
+        resultant = sqrt(interest.(subjects{ss}).(folderVariable{ff}).head.acc(:,1).^2 + interest.(subjects{ss}).(folderVariable{ff}).head.acc(:,2).^2 + interest.(subjects{ss}).(folderVariable{ff}).head.acc(:,3).^2);
+        newAcc = resample(resultant,10,100); 
+    
+        CFEnBCTT_resultant(ss) = CFuzzyEn(newAcc,newEcg);
+        
+    end
+    crossFuzzyStatResultant.(folderVariable{ff}) = CFEnBCTT_resultant;
+end
+
+%% Plotting for CFuzzyEN
+close all
+% 0 - healthy control
+% 1 - exercise tolerant
+% 2 - exercise intolerant
+subInfo = readtable("subjectInfo.xlsx");
+
+accTitle = string({'AP','ML','Vert'});
+for ff = 1:length(folderVariable)
+    figure
+    nexttile
+    scatter(subInfo.Type(1:length(crossFuzzyStatResultant.(folderVariable{ff}))),crossFuzzyStatResultant.(folderVariable{ff}))
+    title(append("CrossFuzEN Resultant ",folderVariable{ff},accTitle(i)))
+    xlim([-1 2])
+    % ylim([0.7 2.5])
+end
 
 
 %%
-original = pwd;
-for i = 1%:length(subjects)
-    cd(original)
-    folderName = fullfile(currentPath,'physionetFormat');
-    folderVariable = 'YOYO';
+% can you do a scatter plot where the x axis is the age, y is the xEn measure, and the different groups are different symbols / colors?
+
+accTitle = string({'AP','ML','Vert'});
+for ff = 1:length(folderVariable)
     figure
-    % figure
-    plot(tm,signal(:,1));hold on;grid on
-    plot(tm(ann),signal(ann,1),'ro')
-
-    % cd(fullfile(folderName,folderVariable,subjects{i}))
-    % recordName = [subjects{i}, '.dat'];
-    % [signal, ~, tm] = rdsamp(recordName);
-    % N = length(signal);
-    % ann = rdann(recordName,'wqrs',[],N);
-    % buffaloTask.(subjects{i}).rrIntervals = ann;
-    % fs = interest.(subjects{s}).(folderVariable).fs;
-    % [heartRate, time] = rr2bpm(ann, fs);
-    % buffaloTask.(subjects{i}).heartRate = heartRate;
-    % buffaloTask.(subjects{i}).hrTime = time;
-
-    plot(tm,signal(:,1));hold on;grid on
-    plot(tm(ann),signal(ann,1),'ro')
-    % bpm = rr2bpm(diff(ann));
-    % plot(bpm)
-    % % Plot the heart rate
-    % plot(time/60,heartRate);
-    % % plot(time, heartRate, '-o');
-    % xlabel('Time (min)');
-    % ylabel('Heart Rate (beats per minute)');
-    % title(string(subjects{i}));
-    % axis tight
-    % grid on;
-    % ylim([60 200])
+    for i = 1:3
+        nexttile
+        gscatter(subInfo.Age(1:length(crossFuzzyStat.(folderVariable{ff}))),crossFuzzyStat.(folderVariable{ff})(:,i),subInfo.Type(1:length(crossFuzzyStat.(folderVariable{ff}))))
+        title(append("CrossFuzEN ",folderVariable{ff},accTitle(i)))
+        % xlim([-1 2])
+        % ylim([0.7 2.5])
+    end
 end
 
+%% ok, can you do a quick exploration, plot the same as before 
+% (different colors on scatter), but change x axis to the xFuz 
+% of a different direction. (e.g., y axis is vertical, x axis is ML)
+
+
+accTitle = string({'AP','ML','Vert'});
+for ff = 1:length(folderVariable)
+    figure
+    for i = 1
+        nexttile
+        gscatter(crossFuzzyStat.(folderVariable{ff})(:,1),crossFuzzyStat.(folderVariable{ff})(:,2),subInfo.Type(1:length(crossFuzzyStat.(folderVariable{ff}))))
+        title(append("CrossFuzEN ",folderVariable{ff},accTitle(i)))        
+        xlabel(accTitle{1})
+        ylabel(accTitle{2})
+        % xlim([-1 2])
+        % ylim([0.7 2.5])
+
+         % Get the x and y data points
+        xData = crossFuzzyStat.(folderVariable{ff})(:,1);
+        yData = crossFuzzyStat.(folderVariable{ff})(:,2);
+
+        % Define labels (e.g., subject ID or index numbers)
+        pointLabels = string(1:length(xData)); % Example: Using index numbers
+
+        % Add text labels to each point
+        for k = 1:length(xData)
+            text(xData(k), yData(k), pointLabels(k), 'FontSize', 10, 'Color', 'black', 'HorizontalAlignment', 'left');
+        end
+
+    end
+end
+
+%% Questionnaire Figure plots
+close all
+
+% questionnaire = readtable("subjectInfo.xlsx",'Sheet','Questionnaires');
+variable = fieldnames(questionnaire);
+xx = listdlg('PromptString',{'Select X Variable',''},...
+        'SelectionMode','single','ListString',variable);
+
+accTitle = string({'AP','ML','Vert'});
+for ff = 1:length(folderVariable)
+    figure
+    for i = 1:3
+        nexttile
+        gscatter(questionnaire.(variable{xx})(1:length(crossFuzzyStat.(folderVariable{ff}))),crossFuzzyStat.(folderVariable{ff})(:,i),questionnaire.Type(1:length(crossFuzzyStat.(folderVariable{ff}))))
+        title(append((variable{xx})," vs CrossFuzEN ",folderVariable{ff},' ',accTitle(i)))
+        % xlim([-1 2])
+        % ylim([0.7 2.5])
+    end
+end
