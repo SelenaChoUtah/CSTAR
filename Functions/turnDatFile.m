@@ -62,6 +62,8 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     cd(outputDir)
     [signal, ~, tm] = rdsamp([recordName, '.dat']);
     N = length(signal);
+    data.signal = signal;
+    data.time = tm;
 
     % wavelet instead of gqrs bc it's better for analyzing non-stationary signals,
     gqrs(recordName,N); % writes annotates *.wqrs
@@ -69,10 +71,25 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     % Needs work to output saved qrs
     ann = rdann(recordName,'qrs',[],N);
     [heartRate, time] = rr2bpm(ann, fs);
+
+    data.ann = ann;
+    data.hrTime = time;
+    data.heartRate = heartRate;
     
-    figure
-    plot(tm,signal(:,1));hold on;grid on
-    plot(tm(ann),signal(ann,1),'ro')
-    lsline
+    saveDataPath = fullfile(outputDir, filesep,recordName,filesep);
+    save(saveDataPath, '-struct', 'data');
+
+    % subIDFold = strcat(opalpath, id{ii},filesep);
+    % if ~isfolder(subIDFold)
+    %     mkdir(subIDFold)
+    % end
+    % savePath = strcat(subIDFold,'data.mat');
+    % opalData = opal.(id{ii});
+    % save(savePath, '-struct', 'opalData');
+    
+    % figure
+    % plot(tm,signal(:,1));hold on;grid on
+    % plot(tm(ann),signal(ann,1),'ro')
+    % lsline
 
 end

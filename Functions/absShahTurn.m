@@ -112,5 +112,17 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
     % plot(absFiltData)
     % plot(mergeStartStop,absFiltData(mergeStartStop),'*')
     % plot(filtData)
+    % 
+    % t = 0:1/100:(6203380-6203270)/100;
+    % figure 
+    % hold on
+    % plot(t,abs(rawVertGyro(6203270:6203380)))
+    % plot(t,absFiltData(6203270:6203380))
+    % yline(5)
+    % legend('unfilt','filt','s','s','threshold')
+    % ylabel('Angular Velocity (deg/s)')
+    % xlabel('Time (sec)')
+    % axis tight
+    % % plot(mergeStartStop,absFiltData(mergeStartStop),'*')
 
 end
