@@ -460,6 +460,8 @@ for ii = 1:length(id)
     end
 end
 
+%% Looking at Head-on-Trunk Movements
+
 %% Ribbon Plots
 
 % Rows: Hours (1 to 24), Columns: Days (Monday to Sunday)

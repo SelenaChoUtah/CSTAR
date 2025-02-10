@@ -39,7 +39,7 @@ end
 %% Individual Day metrics compiled
 
 sensor = {'head','neck','waist'};
-for ss = 1:length(sensor)
+for ss = 3%1:length(sensor)
     stats.indiAmp = [];
     stats.indiVel = [];
     
@@ -65,33 +65,35 @@ for ss = 1:length(sensor)
         
         for dd = 1:length(day)
             try
-            idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
-            idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
-    
-            % small v large
-            smallTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
-            largeTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
-            % ang Velocity
-            smallTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
-            largeTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
-    
-            % number of turns and steps
-            numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
-            stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
-    
-            numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
-            numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
-    
-            % mean of turns
-            ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
-            meanAmp(dd) = mean(ampData);
-            % angular velocity
-            velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
-            meanVel(dd) = mean(velData);
-    
-            % Median of the Turns
-            allAmp(dd) = median(ampData);
-            allVel(dd) = median(velData);
+            if length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude) > 1000 && data.(id{ii}).stepData.(day{dd}).waist.stepCount > 1000
+                idx_n = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude<45);
+                idx_x = find(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude>45);
+        
+                % small v large
+                smallTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+                largeTurnAmp(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+                % ang Velocity
+                smallTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_n)));
+                largeTurnVel(dd) = mean(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity(idx_x)));
+        
+                % number of turns and steps
+                numOfTurns(dd) = length(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+                stepCount(dd) = data.(id{ii}).stepData.(day{dd}).waist.stepCount;
+        
+                numsmallTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_n)));
+                numlargeTurn(dd) = length(nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude(idx_x)));
+        
+                % mean of turns
+                ampData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).amplitude);
+                meanAmp(dd) = mean(ampData);
+                % angular velocity
+                velData = nonzeros(data.(id{ii}).turnData.(day{dd}).(sensor{ss}).angVelocity);
+                meanVel(dd) = mean(velData);
+        
+                % Median of the Turns
+                allAmp(dd) = median(ampData);
+                allVel(dd) = median(velData);
+            end
     
             catch
             end
@@ -141,9 +143,9 @@ end
 clearvars stat variables
 
 sensor = {'head','neck','waist'};
-for ss = 1:length(sensor)
+for ss = 1%:length(sensor)
     id = fieldnames(data);
-    for ii = 1:length(id)
+    for ii = 16%1:length(id)
         day = fieldnames(data.(id{ii}).turnData);
         
         for dd = 1:length(day)
@@ -457,6 +459,8 @@ for ii = 1:length(id)
         end
     end
 end
+
+%% Looking at Head-on-Trunk Movements
 
 %% Ribbon Plots
 
