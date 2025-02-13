@@ -40,8 +40,8 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
     % Stabilization descriptive stats
     time = (0:(1/100):(60*60*24))';
     for s = 1:length(ss)
-        hotTurns.stabilization.amplitude(s) = abs(trapz(time(ss(s,1):ss(s,2)),head(ss(s,1):ss(s,2))));
-        hotTurns.stabilization.angVel(s) = abs(max(head(ss(s,1):ss(s,2))));
+        hotTurns.stablization.amplitude(s) = abs(trapz(time(ss(s,1):ss(s,2)),head(ss(s,1):ss(s,2))));
+        hotTurns.stablization.angVel(s) = abs(max(head(ss(s,1):ss(s,2))));
     end
 
     % Volitional descriptive stats
