@@ -352,9 +352,8 @@ for y = 1:length(yy)
     unique_groups = unique(results.Type);
     for i = 1:length(unique_groups)
         varMean = mean(results.(variable{yy(y)})(results.Type == unique_groups(i)));
-        varStd = std(results.(variable{yy(y)})(results.Type == unique_groups(i)));
         effectName = append('group',num2str(i-1));
-        desStat.(effectName).(variable{yy(y)}) = [varMean varStd];
+        
 
     end
 end

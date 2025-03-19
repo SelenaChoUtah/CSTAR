@@ -64,6 +64,8 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
         ss(vt,2) = t;
     end
 
+    % The unique is another measure to make sure that the it doesn't double
+    % count turns
     startstop = unique(ss,"rows");
 
     % Merge Close Turns within 1/3s in same direction

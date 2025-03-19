@@ -1,5 +1,7 @@
+cd('C:\Users\chose\Box\C-STAR Pilot')
 addpath(genpath('Data\'))
 addpath(genpath('CSTAR\'))
+
 %%
 currentFoldPath = cd;
 
@@ -119,9 +121,10 @@ for i = 1:numel(subjectnum)
         
             % Head on Trunk Analysis
             try
-            if ismember({'head', 'waist'}, sensor)                
-                head = abs(data.(id).(daynum{j}).('head').gyro(:,3));                
-                waist = abs(data.(id).(daynum{j}).('waist').gyro(:,3));
+            if ismember({'head', 'waist'}, sensor) 
+                impulseDuration = 1.476;
+                head = abs(ShahFilter(data.(id).(daynum{j}).('head').gyro(:,3),impulseDuration,100));                
+                waist = abs(ShahFilter(data.(id).(daynum{j}).('waist').gyro(:,3),impulseDuration,100));
                 h = length(head);
                 w = length(waist);                
                 startstop = saveData.turnData.(daynum{j}).('head').startstop;
