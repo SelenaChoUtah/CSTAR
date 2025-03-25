@@ -1,0 +1,9 @@
+%--------------------------------------------------------------------------
+%   
+%     Script for comparing daily head turns and in-lab head turns
+%     between healthy controls and individuals with mTBI
+1. Load in the preprocessed life data
+2. Normative Stats on head turns
+%--------------------------------------------------------------------------
+
+
