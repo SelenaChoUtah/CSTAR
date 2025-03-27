@@ -18,7 +18,10 @@ addpath('CSTAR\')
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
 currentFoldPath = cd;
 % normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
-normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+% CSTAR
+% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+% DHI-LAB: One path for continuous and other for Lab
+normativeFoldPath = dir(fullfile(currentFoldPath,'\RawData\Continuous'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
@@ -46,7 +49,7 @@ for ss = 1:length(subjectnum)
     subID = fieldnames(sortData);
     for i = 1:length(subID)    
         % Create preprocessed folder
-        subIDFolder = strcat(currentFoldPath,'\Data\Preprocess\', subID{i},filesep);
+        subIDFolder = strcat(currentFoldPath,'\PreprocessData\Continuous\', subID{i},filesep);
         if ~isfolder(subIDFolder)
             mkdir(subIDFolder)
         end

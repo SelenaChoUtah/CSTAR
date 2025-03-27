@@ -16,8 +16,13 @@ addpath('CSTAR\')
 
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
-% currentFoldPath = cd;
-normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
+currentFoldPath = cd;
+% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
+% CSTAR
+% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+% DHI-LAB: One path for continuous and other for Lab
+% normativeFoldPath = dir(fullfile(currentFoldPath,'\RawData\Continuous'));
+normativeFoldPath = dir(fullfile(currentFoldPath,'\RawData\Lab'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
@@ -25,7 +30,7 @@ normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '.
 % Which Subject to preprocess
 subjectnum = normativeFolder(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
         'SelectionMode','multiple','ListString',{normativeFolder.name}));
-help max
+
 
 for ss = 1:length(subjectnum)
     disp(append("Subject ", subjectnum(ss).name))
@@ -45,7 +50,7 @@ for ss = 1:length(subjectnum)
     subID = fieldnames(sortData);
     for i = 1:length(subID)    
         % Create preprocessed folder
-        subIDFolder = strcat(currentFoldPath,'\Data\Preprocess\', subID{i},filesep);
+        subIDFolder = strcat(currentFoldPath,'\PreprocessData\Continuous\', subID{i},filesep);
         if ~isfolder(subIDFolder)
             mkdir(subIDFolder)
         end
