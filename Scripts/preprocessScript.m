@@ -2,26 +2,28 @@
 % addpath(genpath(pwd))
 addpath('Data\')
 addpath('CSTAR\')
+% 
 % The point of this script 
 %     1) Pull in raw axivity data
 %     2) Resample 
 %     3) Rotate all sensors to line
 %     4) Identify number of days
 %     5) Split data into separate days
+% 
 % filepath ex/ \DHI\Preprocess\S04\day1\data.mat
 % data.mat: head, neck, waist
 
-
+% cd('C:\Users\chose\Box\C-STAR Pilot')
 %% 1) Pull in raw axivity data
 
 % Current Folder should be at DHI
 % Normative Data Location: \RawData\Normative\S##\...'sensorLocation'.cwa
 currentFoldPath = cd;
-% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
 % CSTAR
-% normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Continuous'));
+normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
+
 % DHI-LAB: One path for continuous and other for Lab
-normativeFoldPath = dir(fullfile(currentFoldPath,'\RawData\Continuous'));
+% normativeFoldPath = dir(fullfile(currentFoldPath,'\RawData\Continuous'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));
@@ -49,7 +51,10 @@ for ss = 1:length(subjectnum)
     subID = fieldnames(sortData);
     for i = 1:length(subID)    
         % Create preprocessed folder
-        subIDFolder = strcat(currentFoldPath,'\PreprocessData\Continuous\', subID{i},filesep);
+        % CSTAR
+        subIDFolder = strcat(currentFoldPath,'\Data\Preprocess\', subID{i},filesep);
+        % DHI
+        % subIDFolder = strcat(currentFoldPath,'\PreprocessData\Continuous\', subID{i},filesep);
         if ~isfolder(subIDFolder)
             mkdir(subIDFolder)
         end
