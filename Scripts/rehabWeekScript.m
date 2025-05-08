@@ -358,4 +358,47 @@ for ss = 2:length(scoreNames)
     end
 end
 
+%% Look At trunk turn
+clc
+% Stable v Volitional
+id = fieldnames(data);
+for ii = 1:length(id)
+    days = fieldnames(data.(id{ii}).turnData);
+    sensor = "waist";
+    for dd = 1:length(days)
+        try
+            variables = fieldnames(data.(id{ii}).turnData.(days{dd}).(sensor));
+            for vv = 1:2%length(variables)               
+                meanVar.(id{ii}).(variables{vv})(dd) = mean(data.(id{ii}).turnData.(days{dd}).(sensor).(variables{vv}));  
+            end
+        catch
+        end
+    end
+    for vv = 1:2%length(variables)               
+        waist.(variables{vv})(ii,1) = mean(meanVar.(id{ii}).(variables{vv}));  
+    end
+        % stdVar.(id{ii}).(segment{ss}).(turnType{tt}).(variables{vv})(dd) = std(data.(id{ii}).(segment{ss}).(days{dd}).(turnType{tt}).(variables{vv}));
+        % meanVar.(id{ii}).(segment{ss}).(turnType{tt}).count(dd) =  length(data.(id{ii}).(segment{ss}).(days{dd}).(turnType{tt}).(variables{vv}));
+end
 
+%%
+clc
+close all
+subInfo = readtable("DHIsubjectInfo.xlsx");
+
+healthyStat.amplitude = waist.amplitude(subInfo.ConcussLabel==0);
+healthyStat.angVelocity = waist.angVelocity(subInfo.ConcussLabel==0);
+concussStat.amplitude = waist.amplitude(subInfo.ConcussLabel==1);
+concussStat.angVelocity = waist.angVelocity(subInfo.ConcussLabel==1);
+
+subInfo.labAmplitude = waist.amplitude;
+subInfo.labAngVelocity = waist.angVelocity;
+
+figure
+hold on
+scatter(waist.angVelocity(subInfo.ConcussLabel==0),waist.amplitude(subInfo.ConcussLabel==0))
+scatter(waist.angVelocity(subInfo.ConcussLabel==1),waist.amplitude(subInfo.ConcussLabel==1))
+legend("HC","mTBI")
+xlabel("angVelocity")
+ylabel("amplitude")
+title("Lumbar AngVel vs Amplitude")
