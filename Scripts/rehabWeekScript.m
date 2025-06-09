@@ -1,7 +1,366 @@
-cd('C:\Users\chose\Box\Digital Health Pilot - Multimodal Sensing')
+%% 1) Loading in DHI and HC Data
+clc
+
+% CSTAR
 cd('C:\Users\chose\Box\C-STAR Pilot')
-addpath(genpath('Data\'))
 addpath(genpath('CSTAR\'))
+addpath(genpath('Data\'))
+currentFoldPath = cd;
+processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
+processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name}));
+
+% Load CSTAR Data 
+for ii = 1:numel(subjectnum)
+    % Save Data into Process
+    id = string(subjectnum(ii).name);
+    % disp(id)   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+end
+
+% DHI-Lab
+cd('C:\Users\chose\Box\DHI-Lab')
+addpath(genpath('ProcessData\'))
+currentFoldPath = cd;
+processPath = dir(fullfile(currentFoldPath,'\ProcessData\Continuous'));
+processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name}));
+
+% Load DHI Data 
+for ii = 1:numel(subjectnum)
+    % Save Data into Process
+    id = string(subjectnum(ii).name);
+    % disp(id)   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+end
+
+
+%% Excel Sheet
+
+subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
+
+%% Mean
+clc
+
+id = subInfo.ID;
+for ii = 1:length(id)
+    dayNum = fieldnames(data.(id{ii}).turnData);
+    for dd = 1:length(dayNum)
+        try
+        sensor = {'head','neck','waist'};
+        for ss = 1:length(sensor)
+            vari = fieldnames(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}));
+            for vv = 1:2
+                % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})))               
+                placeholder.(sensor{ss}).(vari{vv})(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})));
+                
+            end
+        end
+        catch
+        end
+    end
+
+    try
+    for ss = 1:length(sensor)
+        for vv = 1:2
+            colName = append(sensor{ss},'_',vari{vv});
+            subInfo.(colName)(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+            % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
+            % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        end
+    end    
+    catch 
+    end
+end
+
+% Split into small and large turns
+
+id = subInfo.ID;
+for ii = 1:length(id)
+    dayNum = fieldnames(data.(id{ii}).turnData);
+    for dd = 1:length(dayNum)
+        try
+        sensor = {'head','neck','waist'};
+        for ss = 1:length(sensor)
+            vari = fieldnames(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}));
+            for vv = 1%:2
+                small = find(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})<45);
+                large = find(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})>=45);
+
+                placeholder.(sensor{ss}).smallAmp(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{1})(small)));
+                placeholder.(sensor{ss}).largeAmp(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{1})(large)));
+
+                placeholder.(sensor{ss}).smallVel(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{2})(small)));
+                placeholder.(sensor{ss}).largeVel(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{2})(large)));
+
+                % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})))               
+                % placeholder.(sensor{ss}).(vari{vv})(dd,1) = mean(nonzeros(data.(id{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})));
+                
+            end
+        end
+        catch
+        end
+    end
+
+    % try
+    for ss = 1:length(sensor)
+
+        subInfo.(append(sensor{ss},'smallAmp'))(ii,1) = mean(placeholder.(sensor{ss}).smallAmp);
+        subInfo.(append(sensor{ss},'largeAmp'))(ii,1) = mean(placeholder.(sensor{ss}).largeAmp);
+        subInfo.(append(sensor{ss},'smallVel'))(ii,1) = mean(placeholder.(sensor{ss}).smallVel);
+        subInfo.(append(sensor{ss},'largeVel'))(ii,1) = mean(placeholder.(sensor{ss}).largeVel);
+
+
+        % for vv = 1:2
+        %     colName = append(sensor{ss},'_',vari{vv});
+        %     subInfo.(colName)(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        %     % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
+        %     % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        % end
+    end    
+    % catch 
+    % end
+end
+
+%% Plotting freely
+
+varName = subInfo.Properties.VariableNames;
+
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% Ask user to select Y variable
+[yIdx, okY] = listdlg('PromptString','Select Y variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% plot
+xVar = varName{xIdx};
+yVar = varName{yIdx};
+
+xData = subInfo.(xVar);
+yData = subInfo.(yVar);
+
+% Plot
+figure
+hold on
+scatter(xData(subInfo.ConcussLabel==0), yData(subInfo.ConcussLabel==0), 'filled');
+scatter(xData(subInfo.ConcussLabel==1), yData(subInfo.ConcussLabel==1), 'filled');
+
+% offset = 0.01 * range(xData);
+% for i = 1:height(subInfo)
+%     text(xData(i) + offset, yData(i), subInfo.ID(i), 'FontSize', 8);
+% end
+
+xlabel(strrep(xVar, '_', '\_'));
+ylabel(strrep(yVar, '_', '\_'));
+legend("HC","mTBI")
+title(sprintf('Scatter plot of %s vs %s', yVar, xVar), 'Interpreter', 'none');
+saveas(gcf,append(xVar,'_',yVar),'svg')
+
+
+%% Run simple t-test
+
+[xIdx, okX] = listdlg('PromptString','Select variable for t-test:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+xVar = varName{xIdx};
+xData = subInfo.(xVar);
+
+hcData = xData(subInfo.ConcussLabel == 0);
+mTBIData = xData(subInfo.ConcussLabel == 1);
+
+% Perform two-sample t-test
+[h, p, ci, stats] = ttest2(hcData, mTBIData);
+
+fprintf('T-test results for variable %s:\n', xVar);
+fprintf('p-value: %.4f\n', p);
+fprintf('t-statistic: %.4f\n', stats.tstat);
+fprintf('Degrees of freedom: %d\n', stats.df);
+fprintf('Confidence interval: [%.4f, %.4f]\n', ci(1), ci(2));
+
+
+%% Plot Ang Velocity of <30 years old
+
+varName = subInfo.Properties.VariableNames';
+
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% Ask user to select Y variable
+[yIdx, okY] = listdlg('PromptString','Select Y variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% Get variable names
+xVar = varName{xIdx};
+yVar = varName{yIdx};
+
+% Filter data for Age < 30
+ageMask = subInfo.Age < 30;
+
+% Apply filter
+xData = subInfo.(xVar)(ageMask);
+yData = subInfo.(yVar)(ageMask);
+concussLabel = subInfo.ConcussLabel(ageMask);
+
+% Plot
+figure
+hold on
+scatter(xData(concussLabel==0), yData(concussLabel==0), 'filled');
+scatter(xData(concussLabel==1), yData(concussLabel==1), 'filled');
+
+xlabel(strrep(xVar, '_', '\_'));
+ylabel(strrep(yVar, '_', '\_'));
+legend("HC","mTBI")
+title(sprintf('Scatter plot of %s vs %s (Age < 30)', yVar, xVar), 'Interpreter', 'none');
+
+
+
+
+%% Plot violin plot freely
+
+varName = subInfo.Properties.VariableNames';
+
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+xVar = varName{xIdx};
+xData = subInfo.(xVar);
+
+% Apply filter to all relevant variables
+xData = subInfo.(xVar);
+
+% Plot violin
+figure
+hold on
+Violin2(xData(subInfo.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+Violin2(xData(subInfo.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+title([strrep(xVar, '_', '\_') ]);
+saveas(gcf,append("violin_",xVar),'svg')
+
+
+
+%% Age Violin Plots
+
+varName = subInfo.Properties.VariableNames';
+
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+xVar = varName{xIdx};
+xData = subInfo.(xVar);
+
+% Apply filter to all relevant variables
+ageMask = subInfo.Age <= 30;
+xData = subInfo.(xVar)(ageMask);
+concussLabel = subInfo.ConcussLabel(ageMask);
+
+less30 = mes(xData(concussLabel==0),xData(concussLabel==1),'hedgesg')
+
+% Plot violin
+figure
+Violin2(xData(concussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+Violin2(xData(concussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+ylim([70 140])
+title([strrep(xVar, '_', '\_') ' (Age <= 30)']);
+saveas(gcf,'less30','svg')
+
+ageMask = subInfo.Age > 30;
+
+% Apply filter to all relevant variables
+xData = subInfo.(xVar)(ageMask);
+concussLabel = subInfo.ConcussLabel(ageMask);
+great30 = mes(xData(concussLabel==0),xData(concussLabel==1),'hedgesg')
+
+figure
+Violin2(xData(concussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+Violin2(xData(concussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+ylim([70 140])
+title([strrep(xVar, '_', '\_') ' (Age > 30)']);
+saveas(gcf,'greater30','svg')
+
+
+%% descriptive stats
+clc
+
+fprintf("Control: %1.0f\n",length(find(subInfo.ConcussLabel==0)))
+fprintf("Control Age: %1.1f (%1.1f)\n",mean(subInfo.Age(subInfo.ConcussLabel==0)),std(subInfo.Age(subInfo.ConcussLabel==0)))
+fprintf("Control number of Females: %1.0f\n",length(find(strcmp(subInfo.Sex(subInfo.ConcussLabel==0),'F')==1)))
+
+fprintf("Control NSI: %1.1f (%1.1f)\n",mean(subInfo.NSI_Score(subInfo.ConcussLabel==0),"omitnan"),std(subInfo.NSI_Score(subInfo.ConcussLabel==0),"omitnan"))
+fprintf("Control miniBEST: %1.1f (%1.1f)\n",mean(subInfo.MiniBEST(subInfo.ConcussLabel==0),"omitnan"),std(subInfo.MiniBEST(subInfo.ConcussLabel==0),"omitnan"))
+fprintf("Control DHI: %1.1f (%1.1f)\n",mean(subInfo.DHI(subInfo.ConcussLabel==0),"omitnan"),std(subInfo.DHI(subInfo.ConcussLabel==0),"omitnan"))
+
+fprintf("mTBI: %1.0f\n",length(find(subInfo.ConcussLabel==1)))
+fprintf("mTBI Age: %1.1f (%1.1f)\n",mean(subInfo.Age(subInfo.ConcussLabel==1)),std(subInfo.Age(subInfo.ConcussLabel==1)))
+fprintf("mTBI Number of Females: %1.0f\n",length(find(strcmp(subInfo.Sex(subInfo.ConcussLabel==1),'F')==1)))
+
+fprintf("mTBI NSI: %1.1f (%1.1f)\n",mean(subInfo.NSI_Score(subInfo.ConcussLabel==1)),std(subInfo.NSI_Score(subInfo.ConcussLabel==1)))
+fprintf("mTBI miniBEST: %1.1f (%1.1f)\n",mean(subInfo.MiniBEST(subInfo.ConcussLabel==1)),std(subInfo.MiniBEST(subInfo.ConcussLabel==1)))
+fprintf("mTBI DHI: %1.1f (%1.1f)\n",mean(subInfo.DHI(subInfo.ConcussLabel==1)),std(subInfo.DHI(subInfo.ConcussLabel==1)))
+
+
+%% Hedge's G - Pairwise Effect sizes
+
+% stats = mes(data.x_fgaScore_(data.x_label_==0),data.x_fgaScore_(data.x_label_==1),'hedgesg')
+stats = mes(subInfo.head_angVelocity(subInfo.ConcussLabel==0),subInfo.head_angVelocity(subInfo.ConcussLabel==1),'hedgesg')
+
+%% glm
+
+subInfo.Sex = categorical(subInfo.Sex);
+subInfo.ConcussLabel = categorical(subInfo.ConcussLabel);
+subInfo.adjustedAge = subInfo.Age - mean(subInfo.Age);
+% 
+% glm = fitglm(subInfo, 'waist_amplitude ~ 1 + Sex + Age*ConcussLabel')
+% glm = fitglm(subInfo, 'waist_amplitude ~ 1 + Sex + Age*ConcussLabel')
+glm = fitglm(subInfo, 'head_angVelocity ~ 1 + Sex + Age*ConcussLabel')
+
+%%
+youngMask = subInfo.Age > 30;
+youngData = subInfo(youngMask, :);  % This creates a filtered table
+
+% Ensure categorical variables are preserved
+youngData.Sex = categorical(youngData.Sex);
+youngData.ConcussLabel = categorical(youngData.ConcussLabel);
+youngData.adjustedAge = youngData.Age - mean(youngData.Age);
+
+% Fit GLMs on filtered data
+% glm1 = fitglm(youngData, 'waist_amplitude ~ 1 + Sex + Age*ConcussLabel');
+glm2 = fitglm(youngData, 'head_angVelocity ~ 1 + Sex + Age*ConcussLabel')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% OLD
 
 %% Load Data In
 currentFoldPath = cd;
