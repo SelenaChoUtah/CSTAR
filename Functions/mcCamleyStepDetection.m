@@ -42,10 +42,11 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
     stepCount = 0;
     stepPerBout = [];
     StepCountLocPer = [];
-    maxStepDuration = 2; % 30 steps/min, Duration(s) = 60/Cadence
+    maxStepDuration = 2; % 30 steps/min
     minStepDuration = 0.33; % 180 steps/min
     begin = [];
     strideTimePerBout = [];
+    strideTimeAll = [];
 
     try
     % Loop thru all potential steps
@@ -74,12 +75,8 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
                 stepPerBout = [stepPerBout;StepCountLocPer];
                 stepCount = stepCount+StepCountLocPer;
                 StepCountLocPer = 0;    
-                if rem(length(strideTime),2) == 0
-                    result = strideTime(1:2:end) + strideTime(2:2:end);
-                else
-                    result = strideTime(1:2:end-1) + strideTime(2:2:end-1);
-                end
-                strideTimePerBout = [strideTimePerBout; mean(result)];
+                strideTimeAll = [strideTimeAll; strideTime(4:end-4)];
+                strideTimePerBout = [strideTimePerBout; mean(strideTime(4:end-4))];
                 strideTime = [];
             else                      
                 StepCountLocPer = 0;
@@ -88,6 +85,7 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
         end     
     end   
     stepInfo.strideTimePerBout = strideTimePerBout;
+    stepInfo.strideTimeAll = strideTimeAll;
     stepInfo.stepCount = stepCount;
     stepInfo.meanStepBout = round(mean(stepPerBout));
     stepInfo.stepPerBout = stepPerBout;
