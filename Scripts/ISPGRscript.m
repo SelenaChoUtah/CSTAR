@@ -20,3 +20,5 @@ addpath(genpath('Data\'))
 cd('C:\Users\chose\Box\DHI-Lab')
 addpath(genpath('ProcessData\'))
 
+%% 
+
