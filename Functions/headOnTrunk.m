@@ -97,7 +97,8 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
     end
 
     voSS = unique(ss,"rows");
-    matchingRows = voSS(voSS(:, 1) == voSS(:, 2), :);
+    matchingRows = find(voSS(:, 1) == voSS(:, 2));
+    voSS(matchingRows,:) = [];
 
     % Stabilization descriptive stats
     cc = 1;
