@@ -152,6 +152,9 @@ for ii = 1:length(subID)
         end
     end
 
+    fprintf('Subject: %s',subID{ii})
+    placeholder.(sensor{ss}).(vari{vv})
+
     % Save data into table
     for ss = 1:length(sensor)
         vari = fieldnames(placeholder.(sensor{ss}));
