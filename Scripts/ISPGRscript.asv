@@ -120,8 +120,7 @@ for ii = 1:length(subID)
 
     % Save data into table
     for ss = 1:length(sensor)
-        vari = fieldnames(placeholder.(sensor{ss}));
-        for vv = 1:length(vari)
+        for vv = 1:2
             rowNumber = find(strcmp(subInfo.ID, subID{ii}));
             colName = append(sensor{ss},'_',vari{vv});
             subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder.(sensor{ss}).(vari{vv})),'omitnan'); 
@@ -130,41 +129,6 @@ for ii = 1:length(subID)
         end
     end  
 end
-
-%% Stabilization vs Volitional Head Turns
-
-% Calculate average daily head turns for each subject
-subID = fieldnames(dataClean);
-for ii = 1:length(subID)
-    dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
-    for dd = 1:length(dayNum)
-        try
-            % it's not sensor
-            sensor = {'stabilization','volitional'};
-            for ss = 1:length(sensor)
-                vari = fieldnames(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}));
-                for vv = 1:length(vari)
-                    placeholder.(sensor{ss}).(vari{vv})(dd, 1) = mean(nonzeros(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv})));
-                end
-            end
-        catch
-            % warning('Data not available for %s on day %s', id{ii}, dayNum{dd});
-        end
-    end
-
-    % Save data into table
-    for ss = 1:length(sensor)
-        vari = fieldnames(placeholder.(sensor{ss}));
-        for vv = 1:length(vari)
-            rowNumber = find(strcmp(subInfo.ID, subID{ii}));
-            colName = append(sensor{ss},'_',vari{vv});
-            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder.(sensor{ss}).(vari{vv})),'omitnan'); 
-            % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
-            % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
-        end
-    end  
-end
-
 
 %% Plotting freely
 
