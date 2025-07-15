@@ -38,7 +38,7 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
     % plot(-accVICWT)
     % plot(peaks,-accVICWT(peaks),'*')
 
-    % Initialize step count variables
+    %% Initialize step count variables
     stepCount = 0;
     stepPerBout = [];
     StepCountLocPer = [];
@@ -47,6 +47,7 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
     begin = [];
     strideTimePerBout = [];
     strideTimeAll = [];
+    walkBouts = [0 0];
 
     try
     % Loop thru all potential steps
@@ -60,6 +61,7 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
                 LocFlag = 1;
                 StepCountLocPer = StepCountLocPer + 1;
                 start = peaks(p+1);
+                marker = peaks(p);
                 strideTime(1,1) = delta_t;
              else
                 % Continue counting steps
@@ -78,17 +80,27 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
                 strideTimeAll = [strideTimeAll; strideTime(4:end-4)];
                 strideTimePerBout = [strideTimePerBout; mean(strideTime(4:end-4))];
                 strideTime = [];
+                walkBouts(end+1,:) = [marker peaks(p)];
             else                      
                 StepCountLocPer = 0;
                 LocFlag = 0;
             end                
         end     
-    end   
+    end  
+    %%
     stepInfo.strideTimePerBout = strideTimePerBout;
     stepInfo.strideTimeAll = strideTimeAll;
     stepInfo.stepCount = stepCount;
     stepInfo.meanStepBout = round(mean(stepPerBout));
     stepInfo.stepPerBout = stepPerBout;
+    stepInfo.walkBouts = walkBouts(2:end,:);
+
+    % figure
+    % plot(accVICWT)
+    % hold on
+    % plot(walkBouts(2:end,1),accVICWT(walkBouts(2:end,1)),'*')
+    % plot(walkBouts(2:end,2),accVICWT(walkBouts(2:end,2)),'*')
+
 
     %%
     largerBouts = 20;%mean(stepPerBout);
