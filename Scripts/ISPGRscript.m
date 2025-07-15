@@ -15,7 +15,8 @@
 
 
 % Path for HC
-cd('C:\Users\chose\Box\C-STAR Pilot')
+% cd('C:\Users\chose\Box\C-STAR Pilot')
+cd('D:\CSTAR')
 addpath(genpath('CSTAR\'))
 addpath(genpath('Data\'))
 
@@ -36,24 +37,24 @@ for ii = 1:numel(subjectnum)
 end
 
 
-% Path for mTBI data
-cd('C:\Users\chose\Box\DHI-Lab')
-addpath(genpath('CSTAR\'))
-addpath(genpath('ProcessData\'))
-
-currentFoldPath = cd;
-processPath = dir(fullfile(currentFoldPath,'\ProcessData\Continuous'));
-processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
-subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
-        'SelectionMode','multiple','ListString',{processPath.name}));
-
-% Load DHI Data 
-for ii = 1:numel(subjectnum)
-    % Save Data into Process
-    id = string(subjectnum(ii).name);
-    % disp(id)   
-    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
-end
+% % Path for mTBI data
+% cd('C:\Users\chose\Box\DHI-Lab')
+% addpath(genpath('CSTAR\'))
+% addpath(genpath('ProcessData\'))
+% 
+% currentFoldPath = cd;
+% processPath = dir(fullfile(currentFoldPath,'\ProcessData\Continuous'));
+% processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+% subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+%         'SelectionMode','multiple','ListString',{processPath.name}));
+% 
+% % Load DHI Data 
+% for ii = 1:numel(subjectnum)
+%     % Save Data into Process
+%     id = string(subjectnum(ii).name);
+%     % disp(id)   
+%     data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+% end
 
 % Load in the excel data
 
@@ -61,6 +62,7 @@ subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
 
 subInfo(subInfo.ID == "DHI022", :) = [];
 subInfo(subInfo.ID == "DHI023", :) = [];
+subInfo(subInfo.ID == "S20", :) = [];
 
 % Remove duplicate data
 subID = fieldnames(data);
@@ -102,19 +104,22 @@ end
 % Calculate average daily head turns for each subject
 subID = fieldnames(dataClean);
 for ii = 1:length(subID)
+    clearvars placeholder
     dayNum = fieldnames(dataClean.(subID{ii}).turnData);
     for dd = 1:length(dayNum)
         try
             sensor = {'head', 'neck', 'waist'};
             for ss = 1:length(sensor)
                 vari = fieldnames(dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}));
+                if length(nonzeros(dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).amplitude)) > 1000
                 for vv = 1:length(vari)
                     placeholder.(sensor{ss}).(vari{vv})(dd, 1) = mean(nonzeros(dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})));
                 end
                 placeholder.(sensor{ss}).count(dd, 1) = length(nonzeros(dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).(vari{vv})));
+                end
             end
         catch
-            % warning('Data not available for %s on day %s', id{ii}, dayNum{dd});
+            % warning('Data not available for %s on day %s', subID{ii}, dayNum{dd});
         end
     end
 
@@ -126,47 +131,198 @@ for ii = 1:length(subID)
             colName = append(sensor{ss},'_',vari{vv});
             subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder.(sensor{ss}).(vari{vv})),'omitnan'); 
             % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
+            % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        end
+    end  
+end
+
+%% Small And Large Head Turns
+clc
+clearvars placeholder2
+subID = fieldnames(dataClean);
+for ii = 1:length(subID)
+    dayNum = fieldnames(dataClean.(subID{ii}).turnData);
+    for dd = 1:length(dayNum)
+        try
+            sensor = {'head', 'neck'};
+            for ss = 1:length(sensor)
+                if length(nonzeros(dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).amplitude)) > 1000
+                variT = 'amplitude';
+                threshold = 30;
+                turns = dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).(variT);
+                keep = turns>threshold;
+
+                % Manual 
+                if strcmp(variT,'amplitude')
+                    placeholder2.(sensor{ss}).amplitudeThresh(dd, 1) = mean(nonzeros(turns(keep)));
+                    other = dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).angVelocity;
+                    placeholder2.(sensor{ss}).angVelocityThresh(dd, 1) = mean(nonzeros(other(keep)));
+                    placeholder2.(sensor{ss}).countThreshold(dd,1) = length(other(keep));
+                else
+                    placeholder2.(sensor{ss}).angVelocityThresh(dd, 1) = mean(nonzeros(turns(keep)));
+                    other = dataClean.(subID{ii}).turnData.(dayNum{dd}).(sensor{ss}).amplitude;
+                    placeholder2.(sensor{ss}).amplitudeThresh(dd, 1) = mean(nonzeros(other(keep)));
+                    placeholder2.(sensor{ss}).countThreshold(dd,1) = length(other(keep));
+                end
+                end
+
+            end
+        catch
+            % warning('Data not available for %s on day %s', subID{ii}, dayNum{dd});
+        end
+    end
+
+    % Save data into table
+    for ss = 1:length(sensor)
+        vari = fieldnames(placeholder2.(sensor{ss}));
+        for vv = 1:length(vari)
+            rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+            colName = append(sensor{ss},'_',vari{vv},num2str(threshold));
+            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder2.(sensor{ss}).(vari{vv}))); 
+            % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder2.(sensor{ss}).(vari{vv})))
             % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
         end
     end  
 end
 
 %% Stabilization vs Volitional Head Turns
-
+clc
 % Calculate average daily head turns for each subject
 subID = fieldnames(dataClean);
 for ii = 1:length(subID)
+    % clearvars placeholder2
     dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
     for dd = 1:length(dayNum)
         try
             % it's not sensor
             sensor = {'stabilization','volitional'};
             for ss = 1:length(sensor)
-                vari = fieldnames(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}));
-                for vv = 1:length(vari)
-                    placeholder.(sensor{ss}).(vari{vv})(dd, 1) = mean(nonzeros(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv})));
+                 vari = fieldnames(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}));
+                 for vv = 1:2
+                    placeholder2.(sensor{ss}).(vari{vv})(dd, 1) = mean(nonzeros(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv})));          
+                 end
+                 placeholder2.(sensor{ss}).count(dd,1) = length(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv}));
+            end
+        catch
+            % warning('Data not available for %s on day %s', id{ii}, dayNum{dd});
+        end
+    end
+    % placeholder2.(sensor{ss}).angVel
+
+    % fprintf('Subject: %s',subID{ii})
+    % placeholder.(sensor{ss}).(vari{vv})
+
+    % Save data into table
+    for ss = 1:length(sensor)
+        vari = fieldnames(placeholder2.(sensor{ss}));
+        for vv = 1:length(vari)
+            rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+            colName = append(sensor{ss},'_',vari{vv});
+            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder2.(sensor{ss}).(vari{vv})),'omitnan'); 
+            % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
+            % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        end
+    end  
+end
+
+%% Threshold Stabilization vs Volitional Head Turns
+clc
+% Calculate average daily head turns for each subject
+subID = fieldnames(dataClean);
+for ii = 1%:length(subID)
+    % clearvars placeholder2
+    dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
+    for dd = 1:length(dayNum)
+        try
+            % it's not sensor
+            sensor = {'stabilization','volitional'};
+            for ss = 1:2%length(sensor)
+                 vari = fieldnames(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}));
+                 for vv = 2
+                    v1 = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv});
+                    threshold = 0;
+                    placeholder2.(sensor{ss}).(vari{vv})(dd, 1) = mean(nonzeros(v1(v1<threshold)));          
+                 end
+                 placeholder2.(sensor{ss}).count(dd,1) = length(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(vari{vv}));
+            end
+        catch
+            % warning('Data not available for %s on day %s', id{ii}, dayNum{dd});
+        end
+    end
+    % placeholder2.(sensor{ss}).angVel
+
+    % fprintf('Subject: %s',subID{ii})
+    % placeholder.(sensor{ss}).(vari{vv})
+
+    % Save data into table
+    for ss = 1:length(sensor)
+        vari = fieldnames(placeholder2.(sensor{ss}));
+        for vv = 1:length(vari)
+            rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+            colName = append(sensor{ss},'_',vari{vv});
+            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder2.(sensor{ss}).(vari{vv})),'omitnan'); 
+            % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
+            % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
+        end
+    end  
+end
+
+%% Small and Large Stabilization vs Volitional Head Turns
+% clc
+
+% Calculate average daily head turns for each subject
+subID = fieldnames(dataClean);
+for ii = 1:length(subID)
+    % clearvars placeholder2
+    dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
+    for dd = 1:length(dayNum)
+        try
+            % it's not sensor
+            sensor = {'stabilization','volitional'};
+            for ss = 1:length(sensor)
+
+                variT = 'amplitude';
+                threshold = 20;
+                turns = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).(variT);
+                keep = turns>threshold;
+
+                % Manual 
+                if strcmp(variT,'amplitude')
+                    placeholder2.(sensor{ss}).amplitudeThresh(dd, 1) = mean(nonzeros(turns(keep)));
+                    other = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).angVel;
+                    placeholder2.(sensor{ss}).angVelocityThresh(dd, 1) = mean(nonzeros(other(keep)));
+                    placeholder2.(sensor{ss}).countThreshold(dd,1) = length(other(keep));
+                else
+                    placeholder2.(sensor{ss}).angVelocityThresh(dd, 1) = mean(nonzeros(turns(keep)));
+                    other = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(sensor{ss}).amplitude;
+                    placeholder2.(sensor{ss}).amplitudeThresh(dd, 1) = mean(nonzeros(other(keep)));
+                    placeholder2.(sensor{ss}).countThreshold(dd,1) = length(other(keep));
                 end
             end
         catch
             % warning('Data not available for %s on day %s', id{ii}, dayNum{dd});
         end
     end
+    % placeholder2.(sensor{ss}).angVelocityThresh
 
-    fprintf('Subject: %s',subID{ii})
-    placeholder.(sensor{ss}).(vari{vv})
+    % fprintf('Subject: %s',subID{ii})
+    % placeholder.(sensor{ss}).(vari{vv})
 
     % Save data into table
     for ss = 1:length(sensor)
-        vari = fieldnames(placeholder.(sensor{ss}));
+        vari = fieldnames(placeholder2.(sensor{ss}));
         for vv = 1:length(vari)
             rowNumber = find(strcmp(subInfo.ID, subID{ii}));
-            colName = append(sensor{ss},'_',vari{vv});
-            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder.(sensor{ss}).(vari{vv})),'omitnan'); 
+            colName = append(sensor{ss},'_',vari{vv},num2str(threshold+10));
+            % placeholder2.(sensor{ss}).(vari{vv})
+            subInfo.(colName)(rowNumber) = mean(nonzeros(placeholder2.(sensor{ss}).(vari{vv})),'omitnan'); 
             % fprintf("sensor: %s, variable:, %s, mean: %2.2f\n",sensor{ss},vari{vv},mean(placeholder.(sensor{ss}).(vari{vv})))
             % meanStats.(sensor{ss}).(vari{vv})(ii,1) = mean(placeholder.(sensor{ss}).(vari{vv})); 
         end
     end  
 end
+
+
 
 
 %% Plotting freely

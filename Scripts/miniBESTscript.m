@@ -190,43 +190,28 @@ saveas(gcf,append(xVar,'_',yVar),'svg')
 
 varName = subInfo.Properties.VariableNames;
 % Ask user to select X variable
-[xIdx, okX] = listdlg('PromptString','Select Variable for ttest:', ...
-                      'SelectionMode','single', ...
+[xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
                       'ListString', varName);
 
 % plot
-xVar = varName{xIdx};
-xData = subInfo.(xVar);
-
-fprintf("Stats for variable: %s",xVar)
-[h,p,ci,stats] = ttest2(xData(subInfo.ConcussLabel==0),xData(subInfo.ConcussLabel==1))
-
-
-%%
-
-varName = fieldnames(opal.(subID{1}));
-% Ask user to select X variable
-[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
-                      'SelectionMode','single', ...
-                      'ListString', varName);
-
-subID = fieldnames(opal);
-figure
-for ss = 1:length(subID)
-    nexttile
-    plot(opal.(subID{ss}).(varName{xIdx}).head.gyro)
-    title(subID{ss})
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = subInfo.(xVar);
     
+    [h,p,ci,stats] = ttest2(xData(subInfo.ConcussLabel==0),xData(subInfo.ConcussLabel==1));
+    fprintf("Stats for variable: %s\n",xVar)
+    fprintf("\t H: %d p: %d\n",h,p)
 end
 
-%% Plotting Violin Plots
-
-varName = subInfo.Properties.VariableNames';
-
-% Ask user to select X variable
-[xIdx, okX] = listdlg('PromptString','Select Variables for Violin Plot (You can select Multiple):', ...
-                      'SelectionMode','Multiple', ...
-                      'ListString', varName);
+% %% Plotting Violin Plots
+% 
+% varName = subInfo.Properties.VariableNames';
+% 
+% % Ask user to select X variable
+% [xIdx, okX] = listdlg('PromptString','Select Variables for Violin Plot (You can select Multiple):', ...
+%                       'SelectionMode','Multiple', ...
+%                       'ListString', varName);
 
 % Plot violin
 for xx = 1:length(xIdx)
@@ -236,7 +221,61 @@ for xx = 1:length(xIdx)
     Violin2(xData(subInfo.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
     Violin2(xData(subInfo.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
     title(sprintf('Violin Plot %s', xVar), 'Interpreter', 'none');
+    % ylim([2000 9000])
     saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+    
+end
+
+%% Random mean and std
+
+varName = subInfo.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% plot
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = subInfo.(xVar);
+
+    mtbi.mean = round(mean(xData(subInfo.ConcussLabel==1),'omitnan'),2);
+    mtbi.std = round(std(xData(subInfo.ConcussLabel==1),'omitnan'),2);
+    hc.mean = round(mean(xData(subInfo.ConcussLabel==0),'omitnan'),2);
+    hc.std = round(std(xData(subInfo.ConcussLabel==0),'omitnan'),2);
+
+    % Extract data for each group
+    mtbi_data = xData(subInfo.ConcussLabel == 1);
+    hc_data   = xData(subInfo.ConcussLabel == 0);
+    
+    % Group sizes
+    n_mtbi = sum(subInfo.ConcussLabel == 1);
+    n_hc   = sum(subInfo.ConcussLabel == 0);
+    
+    % Standard deviations
+    std_mtbi = std(mtbi_data, 'omitnan');
+    std_hc   = std(hc_data, 'omitnan');
+    
+    % Pooled standard deviation
+    s_pooled = sqrt( ((n_mtbi - 1)*std_mtbi^2 + (n_hc - 1)*std_hc^2) / (n_mtbi + n_hc - 2) );
+    
+    % Group means
+    mean_mtbi = mean(mtbi_data, 'omitnan');
+    mean_hc   = mean(hc_data, 'omitnan');
+    
+    % Cohen's d (unpaired)
+    cohens_d = (mean_mtbi - mean_hc) / s_pooled;
+
+    % calc effect size
+    ES = meanEffectSize(mtbi_data,hc_data,"Effect","robustcohen")
+
+    fprintf("Cohen's d (unpaired) for %s: %.3f\n", varName{xIdx(xx)}, cohens_d);
+    fprintf("HC %s Mean (StDev): %d  (%d)\n",varName{xIdx(xx)},hc.mean,hc.std)
+    fprintf("mTBI %s Mean (StDev): %d  (%d)\n",varName{xIdx(xx)},mtbi.mean,mtbi.std)
+    
+    % [h,p,ci,stats] = ttest2(xData(subInfo.ConcussLabel==0),xData(subInfo.ConcussLabel==1));
+    % fprintf("Stats for variable: %s\n",xVar)
+    % fprintf("\t H: %d p: %d\n",h,p)
 end
 
 %% Scatter with jitter
