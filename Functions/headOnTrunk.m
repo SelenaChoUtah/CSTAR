@@ -43,6 +43,7 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         t = sl(vt);
         % Find start of turn
         while head(t) > ve
+        while absHot(t) > ve
             if t == 1
                 break
             else
@@ -55,6 +56,8 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         t = sl(vt);
         while head(t) > ve
             if t == length(head)
+        while absHot(t) > ve
+            if t == length(absHot)
                 break
             else
                 t = t+1;
@@ -77,6 +80,7 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         t = sl(vt);
         % Find start of turn
         while head(t) > ve
+        while absHot(t) > ve
             if t == 1
                 break
             else
@@ -89,6 +93,8 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         t = sl(vt);
         while head(t) > ve
             if t == length(head)
+        while absHot(t) > ve
+            if t == length(absHot)
                 break
             else
                 t = t+1;
@@ -107,7 +113,11 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         if (stableSS(s,2) - stableSS(s,1)) ~= 0 && abs(trapz(time(stableSS(s,1):stableSS(s,2)),head(stableSS(s,1):stableSS(s,2)))) < 360
             hotTurns.stabilization.amplitude(cc) = abs(trapz(time(stableSS(s,1):stableSS(s,2)),head(stableSS(s,1):stableSS(s,2))));
             hotTurns.stabilization.angVel(cc) = abs(max(head(stableSS(s,1):stableSS(s,2))));
+<<<<<<< HEAD
         elseif (stableSS(s,2) - stableSS(s,1)) ~= 0 && abs(trapz(time(stableSS(s,1):stableSS(s,2)),absHot(stableSS(s,1):stableSS(s,2)))) < 360
+=======
+        if (stableSS(s,2) - stableSS(s,1)) ~= 0 && abs(trapz(time(stableSS(s,1):stableSS(s,2)),absHot(stableSS(s,1):stableSS(s,2)))) < 360
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
             hotTurns.stabilization.amplitudeB(cc) = abs(trapz(time(stableSS(s,1):stableSS(s,2)),absHot(stableSS(s,1):stableSS(s,2))));
             hotTurns.stabilization.amplitudeS(cc) = abs(trapz(time(stableSS(s,1):stableSS(s,2)),head(stableSS(s,1):stableSS(s,2))));
             hotTurns.stabilization.angVelB(cc) = abs(max(absHot(stableSS(s,1):stableSS(s,2))));
@@ -130,7 +140,11 @@ function hotTurns = headOnTrunk(headMinusTrunk,startstop,head,waist)
         if abs(trapz(time(voSS(s,1):voSS(s,2)),head(voSS(s,1):voSS(s,2)))) < 360 
             hotTurns.volitional.amplitude(cc) = abs(trapz(time(voSS(s,1):voSS(s,2)),head(voSS(s,1):voSS(s,2))));
             hotTurns.volitional.angVel(cc) = abs(max(head(voSS(s,1):voSS(s,2))));
+<<<<<<< HEAD
         elseif abs(trapz(time(voSS(s,1):voSS(s,2)),absHot(voSS(s,1):voSS(s,2)))) < 360 
+=======
+        if abs(trapz(time(voSS(s,1):voSS(s,2)),absHot(voSS(s,1):voSS(s,2)))) < 360 
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
             hotTurns.volitional.amplitudeB(cc) = abs(trapz(time(voSS(s,1):voSS(s,2)),absHot(voSS(s,1):voSS(s,2))));
             hotTurns.volitional.angVelB(cc) = abs(max(absHot(voSS(s,1):voSS(s,2))));
             hotTurns.volitional.amplitudeS(cc) = abs(trapz(time(voSS(s,1):voSS(s,2)),head(voSS(s,1):voSS(s,2))));

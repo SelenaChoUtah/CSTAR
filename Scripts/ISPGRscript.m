@@ -137,7 +137,10 @@ for ii = 1:length(subID)
 end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
 %% Small And Large Head Turns
 clc
 clearvars placeholder2
@@ -327,6 +330,9 @@ end
 
 
 
+<<<<<<< HEAD
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
+=======
 >>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
 %% Plotting freely
 
