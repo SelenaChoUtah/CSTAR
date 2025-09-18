@@ -3,6 +3,8 @@ addpath(genpath('Data\'))
 addpath(genpath('CSTAR\'))
 
 %%
+cd('D:\CSTAR')
+addpath(genpath('Data\'))
 currentFoldPath = cd;
 % CSTAR
 preprocessPath = dir(fullfile(currentFoldPath,'\Data\PreProcess'));
