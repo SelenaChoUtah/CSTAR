@@ -1,0 +1,82 @@
+%% fitlme
+
+
+lmeAmplitude = fitlme(subInfo, ...
+    'amplitude ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+
+%% Example: your table is T
+groups = unique(T.ConcussLabel);  % 0 = No, 1 = Yes
+
+% Variables to compute stats for
+vars = subInfo.Properties.VariableNames;
+% Specify which stats to calculate for each variable
+% Options: 'mean', 'std', 'max', '95th', 'sum'
+statsToCompute = {'mean','std','max','95th','sum'};
+
+% Threshold for "large turns" example
+threshold = 30;  
+
+% Initialize results
+results = struct();
+
+for g = 1:length(groups)
+    grp_idx = T.ConcussLabel == groups(g);
+    results(g).Group = groups(g);
+    
+    for v = 1:length(vars)
+        varName = vars{v};
+        data = T.(varName)(grp_idx);
+        
+        % Compute requested stats
+        for s = 1:length(statsToCompute)
+            statName = statsToCompute{s};
+            switch statName
+                case 'mean'
+                    results(g).(varName).Mean = mean(data);
+                case 'std'
+                    results(g).(varName).SD = std(data);
+                case 'max'
+                    results(g).(varName).Max = max(data);
+                case '95th'
+                    results(g).(varName).P95 = prctile(data,95);
+                case 'sum'
+                    results(g).(varName).Sum = sum(data);
+            end
+        end
+    end
+    
+    % Example: count large turns separately
+    if ismember('TurnCount',vars)
+        results(g).TurnCount.LargeTurns = sum(T.TurnCount(grp_idx) > threshold);
+    end
+end
+
+disp(results)
+
+
+
+
+%% fitlme for methods
+
+% Model for amplitude with fixed effect of method and random effects for day and hour nested by ID
+lmeAmplitude = fitlme(compCaliTable, ...
+    'amplitude ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Model for angVelocity
+lmeAngVelocity = fitlme(compCaliTable, ...
+    'angVelocity ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Model for numOfTurns
+lmeNumOfTurns = fitlme(compCaliTable, ...
+    'numOfTurns ~ method + (1|id) + (1|id:day) + (1|id:hour)');
+
+% Display summaries of each model
+disp('Amplitude Model Summary:')
+disp(lmeAmplitude)
+
+disp('AngVelocity Model Summary:')
+disp(lmeAngVelocity)
+
+disp('NumOfTurns Model Summary:')
+disp(lmeNumOfTurns)

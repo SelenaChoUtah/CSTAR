@@ -138,6 +138,11 @@ for ii = 1:length(subID)
     end  
 end
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
 %% Small And Large Head Turns
 clc
 clearvars placeholder2
@@ -327,6 +332,10 @@ end
 
 
 
+<<<<<<< HEAD
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
+=======
+>>>>>>> 033668301a008c1d760767b87cdc1bb22dfb261c
 %% Plotting freely
 
 varName = subInfo.Properties.VariableNames;
@@ -417,3 +426,102 @@ for ii = 1:length(id)
     % catch 
     % end
 end
+
+%% Finding Turns within walking bouts
+
+
+
+
+%% Turns during Walk vs Non Walk
+
+
+subID = fieldnames(dataClean);
+for ii = 1:length(subID)
+    dayNum = fieldnames(dataClean.(subID{ii}).turnNotWalk);
+    for dd = 1:length(dayNum)
+        sensors = fieldnames(dataClean.(subID{ii}).turnWalk.(dayNum{dd}));
+        for ss = 1:length(sensors)
+            amp = [];
+            vel = [];
+            numOfTurn = [];
+            window = fieldnames(dataClean.(subID{ii}).turnWalk.(dayNum{dd}).(sensors{ss}));
+            for ww = 1:length(window)
+                if ~isempty(dataClean.(subID{ii}).turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude)                
+                    amp = [amp; dataClean.(subID{ii}).turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude];
+                    vel = [vel; dataClean.(subID{ii}).turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).angVelocity];
+                end
+            end
+            saveData.(subID{ii}).turnWalk.(dayNum{dd}).(sensors{ss}).amplitude = amp;
+        end
+    end
+end
+
+%% SaveData
+
+dayNum = fieldnames(saveData.turnWalk);
+for dd = 1:length(dayNum)
+    sensors = fieldnames(saveData.turnWalk.(dayNum{dd}));
+    for ss = 1:length(sensors)
+        amp = [];
+        vel = [];
+        numOfTurn = [];
+        window = fieldnames(saveData.turnWalk.(dayNum{dd}).(sensors{ss}));
+        for ww = 1:length(window)-1
+            if ~isempty(saveData.turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude)                
+                amp = [amp; saveData.turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude];
+                vel = [vel; saveData.turnWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).angVelocity];
+            end
+        end
+        saveData.turnWalkData.(dayNum{dd}).(sensors{ss}).totalWalkAmp = amp;
+        saveData.turnWalkData.(dayNum{dd}).(sensors{ss}).totalWalkVel = vel;
+    end
+end
+
+%
+dayNum = fieldnames(saveData.turnNotWalk);
+for dd = 1:length(dayNum)
+    sensors = fieldnames(saveData.turnNotWalk.(dayNum{dd}));
+    for ss = 1:length(sensors)
+        amp = [];
+        vel = [];
+        numOfTurn = [];
+        window = fieldnames(saveData.turnNotWalk.(dayNum{dd}).(sensors{ss}));
+        for ww = 1:length(window)-1
+            if ~isempty(saveData.turnNotWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude)                
+                amp = [amp; saveData.turnNotWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).amplitude];
+                vel = [vel; saveData.turnNotWalk.(dayNum{dd}).(sensors{ss}).(window{ww}).angVelocity];
+            end
+        end
+        saveData.turnWalkData.(dayNum{dd}).(sensors{ss}).totalNotWalkAmp = amp;
+        saveData.turnWalkData.(dayNum{dd}).(sensors{ss}).totalNotWalkVel = vel;
+    end
+end
+
+%% Stabilization Head Turns
+
+id = fieldnames(dataClean);
+subID = fieldnames(dataClean);
+for ii = 1:length(subID)
+    dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);       
+    for vv = 1:2
+        amp = [];
+        vel = [];
+        count = []; 
+        for dd = 1:length(dayNum)
+            vari = fieldnames(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}));
+            a.amp = [amp;mean(nonzeros(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(vari{vv}).amplitude))];  
+            a.vel = [vel;mean(nonzeros(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(vari{vv}).angVel))];  
+            a.count = [count;length(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(vari{vv}).amplitude)];
+        end
+        moreVar = fieldnames(a);
+        for aa = 1:length(moreVar)
+            rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+            colName = append(vari{vv},'_',moreVar{aa});
+            subInfo.(colName)(rowNumber) = mean(nonzeros(a.(moreVar{aa}))); 
+        end
+    end
+end
+
+
+
+
