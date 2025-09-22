@@ -1,6 +1,6 @@
 %% preprocess Axivity
 % addpath(genpath(pwd))
-addpath('Data\')
+addpath('RawData\')
 addpath('CSTAR\')
 % 
 % The point of this script 
@@ -23,7 +23,10 @@ currentFoldPath = cd;
 % normativeFoldPath = dir(fullfile(currentFoldPath,'\Data\Normative'));
 
 % DHI-LAB: One path for continuous and other for Lab
-normativeFoldPath = dir(fullfile(currentFoldPath,'Data\RawData\Continuous'));
+% normativeFoldPath = dir(fullfile(currentFoldPath,'RawData\Continuous'));
+
+% Hard drive 
+normativeFoldPath = dir(fullfile(currentFoldPath,'Data\Raw'));
 
 % Keep only subject folders
 normativeFolder = normativeFoldPath(~ismember({normativeFoldPath.name}, {'.', '..','subject_info.xlsx'}));

@@ -1,0 +1,591 @@
+cd('D:\CSTAR')
+addpath(genpath('CSTAR\'))
+addpath(genpath('Data\'))
+
+currentFoldPath = cd;
+processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
+processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name}));
+
+% clearvars data
+
+% Load Data 
+for ii = 1:numel(subjectnum)
+    % Save Data into Process
+    id = string(subjectnum(ii).name);
+    % disp(id)   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+end
+
+% Load in the excel data
+
+subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
+
+subInfo(subInfo.ID == "DHI022", :) = [];
+subInfo(subInfo.ID == "DHI023", :) = [];
+% subInfo(subInfo.ID == "S20", :) = [];
+subInfo(subInfo.ID == "S31", :) = [];
+subInfo(subInfo.ID == "S32", :) = [];
+
+% Remove duplicate data
+subID = fieldnames(data);
+rowsToKeep = ismember(subID, subInfo.ID);
+
+% Remove rows where data.name does not exist in subInfo.ID
+subID = subID(rowsToKeep);
+
+for i = 1:length(subID)
+    dataClean.(subID{i}) = data.(subID{i});
+end
+
+ 
+%%     Table 1:
+%     Step count – activity rate.
+%     miniBEST Score
+%     Symptom Score
+
+
+
+
+%%     Table 2: Just Head Sensor Kinematics – Lumbar as well.
+%     Mean (SD), Median (SD), 95th percentile (SD)
+%     Intra-day reliability: hour-to-hour variability (CV of hours within one day. Average CV across all the days for)
+%     Inter-day reliability: average per each day, SD, CV.
+
+% Initialize a structure to hold the average daily head turns
+% subID = fieldnames(dataClean);
+% for ii = 1:length(subID)
+%     % check for wearTime
+%     dayNum = fieldnames(dataClean.(subID{ii}).timeData);
+%     for dd = 1:length(dayNum)
+%         sensors = fieldnames(dataClean.(subID{ii}).timeData.(dayNum{dd}));
+%         for ss = 1:length(sensors)
+%             if dataClean.(subID{ii}).timeData.(dayNum{dd}).(sensors{ss}).wearTime > 10
+% 
+%             end
+%         end
+%     end    
+% end
+
+
+samplingRate = 100;
+samplesPerHour = 3600 * samplingRate;
+variables = ["amplitude", "angVelocity"];
+
+subID = fieldnames(dataClean);
+
+for v = 1:length(variables)
+    varName = variables(v);
+    
+    for ii = 1:length(subID)
+        dayNum = fieldnames(dataClean.(subID{ii}).turnData);
+        
+        for dd = 1:length(dayNum)
+            sensors = fieldnames(dataClean.(subID{ii}).turnData.(dayNum{dd}));
+            
+            for ss = 1:length(sensors)
+                thisSensor = sensors{ss};
+
+                % wear time check
+                if isfield(dataClean.(subID{ii}), 'timeData') && ...
+                   isfield(dataClean.(subID{ii}).timeData.(dayNum{dd}), thisSensor) && ...
+                   dataClean.(subID{ii}).timeData.(dayNum{dd}).(thisSensor).wearTime < 10
+                    continue
+                end
+
+                if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor), varName)
+                    continue
+                end
+
+                dataVec = dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor).(varName);
+                startstop = dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor).startstop;
+                timeIdx = startstop(:,1);
+
+                % Initialize hourly stats
+                hourlyMean = nan(1, 24);
+                hourlyMedian = nan(1, 24);
+                hourlyP95 = nan(1, 24);
+                hourlyCount = nan(1, 24);
+
+                for hr = 0:23
+                    hrStart = hr * samplesPerHour;
+                    hrEnd = (hr + 1) * samplesPerHour;
+                    inHour = timeIdx >= hrStart & timeIdx < hrEnd;
+                    if any(inHour)
+                        hourlyData = dataVec(inHour);
+                        hourlyMean(hr + 1) = mean(hourlyData);
+                        hourlyMedian(hr + 1) = median(hourlyData);
+                        hourlyP95(hr + 1) = prctile(hourlyData, 95);
+                        hourlyCount(hr + 1) = sum(inHour);
+                    end
+                end
+
+                % Store daily summary stats
+                allStats.(subID{ii}).(thisSensor).(varName).hourlyMean(dd, :) = hourlyMean;
+                allStats.(subID{ii}).(thisSensor).(varName).hourlyMedian(dd, :) = hourlyMedian;
+                allStats.(subID{ii}).(thisSensor).(varName).hourlyP95(dd, :) = hourlyP95;
+                allStats.(subID{ii}).(thisSensor).(varName).hourlyTurnCount(dd, :) = hourlyCount;
+
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMean(dd) = mean(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMedian(dd) = median(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyP95(dd) = prctile(dataVec, 95);
+                allStats.(subID{ii}).(thisSensor).(varName).dailyTurnCount(dd) = length(dataVec);
+
+                validHour = ~isnan(hourlyMean);
+                if any(validHour)
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = ...
+                        std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                else
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = NaN;
+                end
+
+                % Small vs Large Turns
+                isSmall = dataVec < 45;
+                isLarge = dataVec >= 45;
+                
+                % Initialize containers
+                turnTypes = {'Small', 'Large'};
+                turnMasks = {isSmall, isLarge};
+                
+                for tt = 1:2
+                    turnLabel = turnTypes{tt};
+                    mask = turnMasks{tt};
+                    dataSubset = dataVec(mask);
+                    timeSubset = timeIdx(mask);
+                
+                    hourlyMean = nan(1, 24);
+                    hourlyMedian = nan(1, 24);
+                    hourlyP95 = nan(1, 24);
+                    hourlyCount = nan(1, 24);
+                
+                    for hr = 0:23
+                        hrStart = hr * samplesPerHour;
+                        hrEnd = (hr + 1) * samplesPerHour;
+                        inHour = timeSubset >= hrStart & timeSubset < hrEnd;
+                
+                        if any(inHour)
+                            hourlyData = dataSubset(inHour);
+                            hourlyMean(hr + 1) = mean(hourlyData);
+                            hourlyMedian(hr + 1) = median(hourlyData);
+                            hourlyP95(hr + 1) = prctile(hourlyData, 95);
+                            hourlyCount(hr + 1) = sum(inHour);
+                        end
+                    end
+                
+                    % Store stats for Small/Large turns
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMean'])(dd, :) = hourlyMean;
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMedian'])(dd, :) = hourlyMedian;
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyP95'])(dd, :) = hourlyP95;
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyCount'])(dd, :) = hourlyCount;
+                
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMean'])(dd) = mean(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMedian'])(dd) = median(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyP95'])(dd) = prctile(dataSubset, 95);
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyStd'])(dd) = std(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'TurnCount'])(dd) = length(dataSubset);
+                
+                    validHour = ~isnan(hourlyMean);
+                    if any(validHour)
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = ...
+                            std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                    else
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = NaN;
+                    end
+                end
+            end
+        end
+    end
+end
+
+% allStats_HC = struct;
+% allStats_mTBI = struct;
+% 
+% subID = fieldnames(allStats);
+% for ii = 1:length(subID)
+%     subj = subID{ii};
+%     label = subInfo.ConcussLabel(ii); % 0 = HC, 1 = mTBI
+% 
+%     if label == 0
+%         allStats_HC.(subj) = allStats.(subj);
+%     else
+%         allStats_mTBI.(subj) = allStats.(subj);
+%     end
+% end
+% 
+% groupStats_HC = computeGroupStats_turnData(allStats_HC);
+% groupStats_mTBI = computeGroupStats_turnData(allStats_mTBI);
+
+
+%% Put all the stats into subInfo Table
+
+subID = fieldnames(allStats);
+for ii = 1:length(subID)
+    sensors = fieldnames(allStats.(subID{ii}));
+    for ss = 1:length(sensors)
+        thisSensor = sensors{ss};   
+        varName = fieldnames(allStats.(subID{ii}).(thisSensor));
+        for vv = 1:length(varName)
+            statsVar = fieldnames(allStats.(subID{ii}).(thisSensor).(varName{vv}));
+            for sv = 1:length(statsVar)
+                theStat = nonzeros(allStats.(subID{ii}).(thisSensor).(varName{vv}).(statsVar{sv})(:));
+
+                % save info to subINFO
+                rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+                colName = append(thisSensor,'_',varName{vv},statsVar{sv});
+                subInfo.(colName)(rowNumber) = mean(theStat,'omitnan'); 
+
+            end
+        end
+    end
+end
+
+
+%%     Table 3: Stabilizing, Volitional
+%     Same metrics as the above of table 2
+
+samplingRate = 100;
+samplesPerHour = 3600 * samplingRate;
+variables = ["amplitude", "angVel"];
+categories = ["stabilization", "volitional"];
+
+subID = fieldnames(dataClean);
+
+for v = 1:length(variables)
+    varName = variables(v);
+    for c = 1:length(categories)
+        category = categories(c);  % 'stabilization' or 'volitional'
+
+        for ii = 1:length(subID)
+            dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
+
+            for dd = 1:length(dayNum)
+                if ~isfield(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}), category)
+                    continue
+                end
+
+                % Check for variable existence
+                if ~isfield(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(category), varName)
+                    continue
+                end
+
+                % Load data
+                dataVec = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(category).(varName);
+                
+                hot.(subID{ii}).headOnTrunk.(category).(varName).dailyMean(dd) = mean(dataVec, 'omitnan');
+                hot.(subID{ii}).headOnTrunk.(category).(varName).dailyMedian(dd) = median(dataVec, 'omitnan');
+                hot.(subID{ii}).headOnTrunk.(category).(varName).dailyP95(dd) = prctile(dataVec, 95);
+                hot.(subID{ii}).headOnTrunk.(category).(varName).dailyCount(dd) = length(dataVec);
+
+
+                validHour = ~isnan(hourlyMean);
+                if any(validHour)
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).intraDayCV(dd) = ...
+                        std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                else
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).intraDayCV(dd) = NaN;
+                end
+
+                % Small vs Large turns
+                isSmall = dataVec < 45;
+                isLarge = dataVec >= 45;
+
+                turnTypes = {'Small', 'Large'};
+                turnMasks = {isSmall, isLarge};
+
+                for tt = 1:2
+                    turnLabel = turnTypes{tt};
+                    mask = turnMasks{tt};
+                    dataSubset = dataVec(mask);                   
+
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'DailyMean'])(dd) = mean(dataSubset, 'omitnan');
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'DailyMedian'])(dd) = median(dataSubset, 'omitnan');
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'DailyP95'])(dd) = prctile(dataSubset, 95);
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'DailyStd'])(dd) = std(dataSubset, 'omitnan');
+                    hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'Count'])(dd) = length(dataSubset);
+
+                    validHour = ~isnan(hourlyMean);
+                    if any(validHour)
+                        hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'IntraDayCV'])(dd) = ...
+                            std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                    else
+                        hot.(subID{ii}).headOnTrunk.(category).(varName).([turnLabel 'IntraDayCV'])(dd) = NaN;
+                    end
+                end
+            end
+        end
+    end
+end
+
+%% Put all the stats into subInfo Table
+
+subID = fieldnames(hot);
+for ii = 1:length(subID)
+    sensors = fieldnames(hot.(subID{ii}).headOnTrunk);
+    for ss = 1:length(sensors)
+        thisSensor = sensors{ss};   
+        varName = fieldnames(hot.(subID{ii}).headOnTrunk.(thisSensor));
+        for vv = 1:length(varName)
+            statsVar = fieldnames(hot.(subID{ii}).headOnTrunk.(thisSensor).(varName{vv}));
+            for sv = 1:length(statsVar)
+                theStat = nonzeros(hot.(subID{ii}).headOnTrunk.(thisSensor).(varName{vv}).(statsVar{sv})(:));
+
+                % save info to subINFO
+                rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+                colName = append(thisSensor,'_',varName{vv},statsVar{sv});
+                subInfo.(colName)(rowNumber) = mean(theStat,'omitnan'); 
+
+            end
+        end
+    end
+end
+
+
+%% Step Count
+
+subID = fieldnames(dataClean);
+
+for ii = 1:length(subID)
+    dayNum = fieldnames(dataClean.(subID{ii}).stepData);  
+    clearvars stepCount
+    for dd = 1:length(dayNum)
+        sensors = 'waist';        
+        if isfield(dataClean.(subID{ii}).stepData.(dayNum{dd}), sensors)
+            stepCount(dd,1) = dataClean.(subID{ii}).stepData.(dayNum{dd}).(sensors).stepCount;            
+        end        
+    end    
+    turnLabel = 'stepCount';
+    stepStats.(subID{ii}).([turnLabel 'DailyMean']) = mean(stepCount, 'omitnan');
+    stepStats.(subID{ii}).([turnLabel 'DailyMedian']) = median(stepCount, 'omitnan');
+    stepStats.(subID{ii}).([turnLabel 'DailyP95']) = prctile(stepCount, 95);
+    stepStats.(subID{ii}).([turnLabel 'DailyStd']) = std(stepCount, 'omitnan');
+end
+
+subID = fieldnames(stepStats);
+for ii = 1:length(subID)  
+    varName = fieldnames(stepStats.(subID{ii}));
+    for vv = 1:length(varName)
+        theStat = nonzeros(stepStats.(subID{ii}).(varName{vv}));
+        % save info to subINFO
+        rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+        colName = varName{vv};
+        subInfo.(colName)(rowNumber) = mean(theStat,'omitnan'); 
+    end
+end
+
+
+%% Does weekday or weekend matter?
+
+% need to create an array of week - back calculated from end date. 
+
+subID = fieldnames(dataClean);
+amplitude = [];
+angVelocity = [];
+
+for ss = 1:numel(subID)
+    dayNum = fieldnames(dataClean.(subID{ss}).turnData);
+    % I only care about head metrics
+    sensor = 'head';
+    variables = {'amplitude','angVelocity'};
+    
+    for dd = 1:numel(dayNum)
+        if ~isfield(dataClean.(subID{ss}).turnData.(dayNum{dd}), 'head')
+            continue
+        end
+
+        if ismember(dayOfWeek, {'Sat','Sun'})
+            dayType = 'weekend';
+        else
+            dayType = 'weekday';
+        end
+
+        dayOfWeek = dataClean.(subID{ss}).timeData.(dayNum{dd}).head.dayOfWeek;
+        amps = dataClean.(subID{ss}).turnData.(dayNum{dd}).head.amplitude;
+        angVel = dataClean.(subID{ss}).turnData.(dayNum{dd}).head.angVelocity;
+
+        nTurns = numel(amps);
+        meanAmp = mean(amps,'omitnan');
+        meanVel = mean(angVel,'omitnan');
+
+        amplitude = [amplitude; 
+            {subID{ss}, dayNum{dd}, dayOfWeek, dayType, nTurns, meanAmp}];
+        angVelocity = [angVelocity; 
+            {subID{ss}, dayNum{dd}, dayOfWeek, dayType, nTurns, meanVel}];
+
+    end
+    
+end
+
+amplitudeTable = cell2table(amplitude, ...
+    'VariableNames', {'Subject','DayNum','DayOfWeek','DayType','NumTurns','MeanAmplitude'});
+angVelocityTable = cell2table(angVelocity, ...
+    'VariableNames', {'Subject','DayNum','DayOfWeek','DayType','NumTurns','MeanAngVel'});
+
+%% Does weekday or weekend matter?
+
+% need to create an array of week - back calculated from end date. 
+
+subID = fieldnames(dataClean);
+amplitude = [];
+angVelocity = [];
+
+for ii = 1:length(subID)
+    dayNum = fieldnames(dataClean.(subID{ii}).turnData);
+    rowNumber = find(strcmp(subInfo.ID, subID{ii}));
+    lastDay = subInfo.LastDay(rowNumber);
+    fullWeek = lastDay - caldays(0:length(dayNum)-1);
+    fullWeek = fliplr(fullWeek);
+
+    sensor = 'head';
+    variables = {'amplitude','angVelocity'};
+    for dd = 1:length(dayNum)
+        if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}), 'head')
+            continue
+        end
+
+        if ismember(day(fullWeek(dd), 'shortname'), {'Sat','Sun'})
+            dayType = 'weekend';
+        else
+            dayType = 'weekday';
+        end
+
+        amps = dataClean.(subID{ii}).turnData.(dayNum{dd}).head.amplitude;
+        angVel = dataClean.(subID{ii}).turnData.(dayNum{dd}).head.angVelocity;
+
+        nTurns = numel(amps);
+        meanAmp = mean(amps,'omitnan');
+        meanVel = mean(angVel,'omitnan');
+
+        amplitude = [amplitude; 
+            {subID{ii}, dayNum{dd}, fullWeek(dd), dayType, nTurns, meanAmp}];
+        angVelocity = [angVelocity; 
+            {subID{ii}, dayNum{dd}, fullWeek(dd), dayType, nTurns, meanVel}];
+
+
+    end
+end
+amplitudeTable = cell2table(amplitude, ...
+    'VariableNames', {'Subject','DayNum','DayOfWeek','DayType','NumTurns','Mean'});
+angVelocityTable = cell2table(angVelocity, ...
+    'VariableNames', {'Subject','DayNum','DayOfWeek','DayType','NumTurns','Mean'});
+
+
+%% Stats Weekday vs weekend
+
+T = amplitudeTable;
+% T = angVelocityTable;
+
+weekendIdx = strcmp(T.DayType, 'weekend');
+weekdayIdx = strcmp(T.DayType, 'weekday');
+
+% Extract variables
+weekendTurns = T.NumTurns(weekendIdx);
+weekdayTurns = T.NumTurns(weekdayIdx);
+fprintf()
+
+
+weekendAmp = T.Mean(weekendIdx);
+weekdayAmp = T.Mean(weekdayIdx);
+
+% Run t-tests
+[~, p_turns] = ttest2(weekendTurns, weekdayTurns);
+[~, p_amp]   = ttest2(weekendAmp, weekdayAmp);
+
+% Display results
+fprintf('NumTurns: p = %.4f\n', p_turns);
+fprintf('MeanAmplitude: p = %.4f\n', p_amp);
+%%
+
+% conditions = ["stabilization", "volitional"];
+% variables = ["amplitude", "angVel"];
+% ampThreshold = 10;  % degrees
+% 
+% subID = fieldnames(dataClean);
+% 
+% for c = 1:length(conditions)
+%     cond = conditions(c);
+% 
+%     for ii = 1:length(subID)
+%         if ~isfield(dataClean.(subID{ii}), 'headOnTrunkCount')
+%             continue
+%         end
+% 
+%         dayNum = fieldnames(dataClean.(subID{ii}).headOnTrunkCount);
+% 
+%         for dd = 1:length(dayNum)
+%             % wear time check
+%             if isfield(dataClean.(subID{ii}), 'timeData') && ...
+%                isfield(dataClean.(subID{ii}).timeData.(dayNum{dd}), 'head') && ...
+%                dataClean.(subID{ii}).timeData.(dayNum{dd}).head.wearTime < 10
+%                 continue
+%             end
+% 
+%             for v = 1:length(variables)
+%                 varName = variables(v);                
+% 
+%                 if ~isfield(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}), cond) || ...
+%                    ~isfield(dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(cond), varName)
+%                     continue
+%                 end
+% 
+%                 % Extract both amplitude and angVelocity once per condition/day
+%                 if v == 1  % only need to extract and filter once
+%                     ampVec = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(cond).amplitude;
+%                     angVelVec = dataClean.(subID{ii}).headOnTrunkCount.(dayNum{dd}).(cond).angVel;
+% 
+%                     % Sanity checks
+%                     if isempty(ampVec) || isempty(angVelVec) || length(ampVec) ~= length(angVelVec)
+%                         continue
+%                     end
+% 
+%                     % Thresholding
+%                     validIdx = ampVec > ampThreshold;
+%                     if sum(validIdx) < 1
+%                         continue
+%                     end
+% 
+%                     ampVec = ampVec(validIdx);
+%                     angVelVec = angVelVec(validIdx);
+%                 end
+% 
+%                 % Choose which vector to compute on
+%                 if varName == "amplitude"
+%                     dataVec = ampVec;
+%                 else
+%                     dataVec = angVelVec;
+%                 end
+% 
+%                 % Daily stats
+%                 hot.(subID{ii}).headOnTrunk.(cond).(varName).dailyMean(dd)   = mean(nonzeros(dataVec), 'omitnan');
+%                 hot.(subID{ii}).headOnTrunk.(cond).(varName).dailyMedian(dd) = median(nonzeros(dataVec), 'omitnan');
+%                 hot.(subID{ii}).headOnTrunk.(cond).(varName).dailyP95(dd)    = prctile(nonzeros(dataVec), 95);
+%                 hot.(subID{ii}).headOnTrunk.(cond).(varName).dailyTurnCount(dd) = length(dataVec);
+%             end
+% 
+%             % Compute inter-day CV using amplitude only (after filtering)
+%             d = hot.(subID{ii}).headOnTrunk.(cond).amplitude.dailyMean;
+%             if any(~isnan(d))
+%                 hot.(subID{ii}).headOnTrunk.(cond).amplitude.interDay.cv = ...
+%                     std(d, 'omitnan') / mean(d, 'omitnan');
+%             end
+%         end
+%     end
+% end
+% 
+% allStats_HC = struct;
+% allStats_mTBI = struct;
+% 
+% subID = fieldnames(hot);
+% for ii = 1:length(subID)
+%     subj = subID{ii};
+%     label = subInfo.ConcussLabel(ii); % 0 = HC, 1 = mTBI
+% 
+%     if label == 0
+%         allStats_HC.(subj) = hot.(subj);
+%     else
+%         allStats_mTBI.(subj) = hot.(subj);
+%     end
+% end
+% 
+% groupStats_HC.headOnTrunk = computeGroupStats(allStats_HC);
+% groupStats_mTBI.headOnTrunk = computeGroupStats(allStats_mTBI);

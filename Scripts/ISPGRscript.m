@@ -28,7 +28,7 @@ subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can s
 
 clearvars data
 
-% Load CSTAR Data 
+% Load Data 
 for ii = 1:numel(subjectnum)
     % Save Data into Process
     id = string(subjectnum(ii).name);
@@ -63,6 +63,8 @@ subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
 subInfo(subInfo.ID == "DHI022", :) = [];
 subInfo(subInfo.ID == "DHI023", :) = [];
 subInfo(subInfo.ID == "S20", :) = [];
+subInfo(subInfo.ID == "S31", :) = [];
+subInfo(subInfo.ID == "S32", :) = [];
 
 % Remove duplicate data
 subID = fieldnames(data);

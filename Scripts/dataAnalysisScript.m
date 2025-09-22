@@ -7,7 +7,7 @@ cd('D:\CSTAR')
 addpath(genpath('Data\'))
 currentFoldPath = cd;
 % CSTAR
-preprocessPath = dir(fullfile(currentFoldPath,'\Data\PreProcess'));
+preprocessPath = dir(fullfile(currentFoldPath,'\Data\Preprocess'));
 % DHI-Lab
 % preprocessPath = dir(fullfile(currentFoldPath,'\PreprocessData\Continuous'));
 preprocessPath = preprocessPath(~ismember({preprocessPath.name}, {'.', '..'}));

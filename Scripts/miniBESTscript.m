@@ -222,7 +222,7 @@ for xx = 1:length(xIdx)
     Violin2(xData(subInfo.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
     title(sprintf('Violin Plot %s', xVar), 'Interpreter', 'none');
     % ylim([2000 9000])
-    saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+    % saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
     
 end
 
