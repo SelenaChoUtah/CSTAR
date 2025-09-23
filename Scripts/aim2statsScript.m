@@ -21,11 +21,11 @@ end
 % Load in the excel data
 subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
 
-subInfo(subInfo.ID == "DHI022", :) = [];
-subInfo(subInfo.ID == "DHI023", :) = [];
+% subInfo(subInfo.ID == "DHI022", :) = [];
+% subInfo(subInfo.ID == "DHI023", :) = [];
 % subInfo(subInfo.ID == "S20", :) = [];
-subInfo(subInfo.ID == "S31", :) = [];
-subInfo(subInfo.ID == "S32", :) = [];
+% subInfo(subInfo.ID == "S31", :) = [];
+% subInfo(subInfo.ID == "S32", :) = [];
 
 % Remove duplicate data
 subID = fieldnames(data);
@@ -196,7 +196,7 @@ for ii = 1:length(subID)
     end
 end
 
-%%
+%% Scatterplot
 
 varName = subInfo.Properties.VariableNames;
 
@@ -235,7 +235,7 @@ title(sprintf('Scatter plot of %s vs %s', yVar, xVar), 'Interpreter', 'none');
 saveas(gcf,append(xVar,'_',yVar),'svg')
 
 
-%% T-Test
+%% T-Test and Violin
 
 varName = subInfo.Properties.VariableNames;
 % Ask user to select X variable

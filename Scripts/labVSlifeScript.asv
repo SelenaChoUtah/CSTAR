@@ -172,7 +172,7 @@ for ss = 1:length(subID)
 end
 
 % Pull in subInfo
-subInfo = readtable("DHIsubjectInfo.xlsx");
+% subInfo = readtable("DHIsubjectInfo.xlsx");
 
 healthyStat.amplitude = stats.amplitude(subInfo.ConcussLabel==0);
 healthyStat.angVelocity = stats.angVelocity(subInfo.ConcussLabel==0);
