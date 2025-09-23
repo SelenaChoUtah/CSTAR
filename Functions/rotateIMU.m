@@ -23,31 +23,36 @@ function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateW
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
         swayAP = fullAP(calibrateWindow(c,1):calibrateWindow(c,2));
 
-        sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
-        sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
-        sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));
+        if fullWindow(c,2) < length(fullV)            
+            sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
+            sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
+            sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));        
         
-        % Filtered data is corrected to original coordinate system and averaged
-        % across each plane, then substracted from it's corrected data to reach
-        % [0,0].
-        trueAP = sectionAP.*(cos(asin(mean(swayAP))))- (sectionV).*(mean(swayAP));
-        trueVP = sectionAP.*(mean(swayAP))+ (sectionV).*(cos(asin(mean(swayAP))));
-        trueML = sectionML.*(cos(asin(mean(swayML))))- (trueVP).*(mean(swayML));
-        trueV = sectionML.*(mean(swayML))+(trueVP).*(cos(asin(mean(swayML))))-1;
+            % Filtered data is corrected to original coordinate system and averaged
+            % across each plane, then substracted from it's corrected data to reach
+            % [0,0].
+            trueAP = sectionAP.*(cos(asin(mean(swayAP))))- (sectionV).*(mean(swayAP));
+            trueVP = sectionAP.*(mean(swayAP))+ (sectionV).*(cos(asin(mean(swayAP))));
+            trueML = sectionML.*(cos(asin(mean(swayML))))- (trueVP).*(mean(swayML));
+            trueV = sectionML.*(mean(swayML))+(trueVP).*(cos(asin(mean(swayML))))-1;
+        
+            % Estimate of tilt angle
+            sV = mean(trueV);
+            sML = mean(trueML);
+            sAP = mean(trueAP);
     
-        % Estimate of tilt angle
-        sV = mean(trueV);
-        sML = mean(trueML);
-        sAP = mean(trueAP);
+            Vert = trueV - sV;
+            ML = trueML - sML;
+            AP = trueAP - sAP;
+    
+            actualVert = [actualVert; Vert];
+            actualML = [actualML; ML];
+            actualAP = [actualAP; AP];
+            Rot_data = [Rot_data; sAP, sML];
 
-        Vert = trueV - sV;
-        ML = trueML - sML;
-        AP = trueAP - sAP;
-
-        actualVert = [actualVert; Vert];
-        actualML = [actualML; ML];
-        actualAP = [actualAP; AP];
-        Rot_data = [Rot_data; sAP, sML];
+        else
+            continue
+        end
     
     end
         
