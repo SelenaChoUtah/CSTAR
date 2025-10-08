@@ -88,6 +88,9 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
             if (startstop(hh+1,1) - startstop(hh,2))/100 < 0.33 && (startstop(hh+1,2) - startstop(hh,1))/100 < 5
                 mergeStartStop(end+1,:) = [startstop(hh,1), startstop(hh+1,2)];
                 hh = hh + 2;
+                if hh > height(startstop)
+                    continue
+                end
             end
             mergeStartStop(end+1,:) = startstop(hh,:);
             hh = hh + 1;

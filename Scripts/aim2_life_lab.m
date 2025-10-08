@@ -1,5 +1,6 @@
 %% Loading life data
-
+cd('C:\Users\chose\Box\DHI-Lab\')
+addpath(genpath('CSTAR\'))
 cd('D:\CSTAR')
 addpath(genpath('CSTAR\'))
 addpath(genpath('Data\'))
@@ -12,24 +13,32 @@ subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
 currentFoldPath = cd;
 processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
 processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
-subjectnum = processPath(listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
-        'SelectionMode','multiple','ListString',{processPath.name}));
+aa = listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name});
+subjectnum = processPath(aa);
 
+% % walking bout data
+% walkprocessPath = dir(fullfile(currentFoldPath,'\Data\Walking'));
+% walkprocessPath = walkprocessPath(~ismember({walkprocessPath.name}, {'.', '..'}));
+% wsubjectnum = walkprocessPath(aa);
 
 % Load Life Data 
 for ii = 1:numel(subjectnum)
     % Save Data into Process
     id = string(subjectnum(ii).name);
     % disp(id)   
-    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));  
+    % newData = load(fullfile(wsubjectnum(ii).folder,wsubjectnum(ii).name,'data.mat'));
+    % data.(id).turnWalk = newData.turnWalk;
 end
 
 % Remove duplicate data
 subID = fieldnames(data);
-rowsToKeep = ismember(subID, subInfo.ID);
+rowsToKeep = ismember(subID, subInfo.DHI_ID);
 
 % Remove rows where data.name does not exist in subInfo.ID
 subID = subID(rowsToKeep);
+subInfo(subInfo.ID == "DHI010", :) = []; %<-only 1 full day
 
 for i = 1:length(subID)
     dataClean.(subID{i}) = data.(subID{i});
@@ -192,7 +201,7 @@ for ii = 1:length(subID)
     end
 end
 
-%% Loading Lab Data
+% Loading Lab Data
 dataPath = dir(fullfile(currentFoldPath,'\DHI_data\PreprocessData\Lab\Axivity\'));
 
 % Keep only subject folders
@@ -274,7 +283,7 @@ scatter(xData(subInfo.ConcussLabel==1), yData(subInfo.ConcussLabel==1), 'filled'
 
 offset = 0.01 * range(xData);
 for i = 1:height(subInfo)
-    text(xData(i) + offset, yData(i), subInfo.ID(i), 'FontSize', 8);
+    text(xData(i) + offset, yData(i), subInfo.DHI_ID(i), 'FontSize', 8);
 end
 
 xlabel(strrep(xVar, '_', '\_'));
@@ -322,3 +331,217 @@ for xx = 1:length(xIdx)
     % saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
     
 end
+
+%% Calculate Mean Effect Size
+
+allVars = {};
+allES   = [];
+allCI = [];
+
+varNames = subInfo.Properties.VariableNames;
+for vv = 23:length(varNames)
+    xData = subInfo.(varNames{vv});
+    mtbi_data = xData(subInfo.ConcussLabel == 1);
+    hc_data   = xData(subInfo.ConcussLabel == 0);
+    
+    % calc effect size
+    ES = meanEffectSize(mtbi_data,hc_data,"Effect","robustcohen");    
+    
+    % store results
+    allVars{end+1,1} = varNames{vv};  
+    allES(end+1,1)   = ES.Effect;
+    allCI(end+1,1:2)   = ES.ConfidenceIntervals;
+end
+
+resultsTable = table(allVars, allES, allCI, ...
+    'VariableNames', {'Variable','EffectSize', 'CI'});
+
+
+%% Z-score and then PCA
+
+% Step 1: remove ID/categorical variables
+% T = subInfo;
+% removeVars = {'ID','DHI_ID','Sex','Concuss','ConcussLabel','Type','HasHealthyMatch_','LastDay'};
+% T(:, removeVars) = [];
+
+% T = subInfo(1:21,:);
+% removeVars = {'ID','DHI_ID','Sex','Concuss','ConcussLabel','Type','HasHealthyMatch_','LastDay','tug_st_time','tug_dt_time','DaysSince'};
+% T(:, removeVars) = [];
+T = subInfo(:,[3,23:80]);
+
+% Step 2: select numeric features you want
+% varsForPCA = {'NSI_Score','Anxiety','Cognitive','Migraine','Ocular','Vestibular','CP_score','VOMs','MiniBEST','DHI',...
+%               'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV'};
+ 
+varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudeintraDayCV',...
+              'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+              'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95', ...
+              'head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV'};
+ 
+% varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudedailyTurnCount','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+%               'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95','head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV',...
+%               'head_angVelocityLargeDailyMean','head_angVelocityLargeDailyP95','head_angVelocityLargeIntraDayCV'};
+
+% varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudedailyTurnCount','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+%               'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95','head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV'};
+
+X = T{:, varsForPCA};  % convert to numeric matrix
+
+% Step 3: standardize (z-score)
+Xz = zscore(X);
+
+% Step 4: run PCA
+[coeff, score, latent, tsq, explained] = pca(Xz);
+ 
+% figure
+% plot(cumsum(explained), '-o');
+% xlabel('PCs'); ylabel('Cumulative Variance Explained (%)');
+% title('PCA on Selected Features');
+
+
+% Plotting nPCs
+nPCs = 3;
+
+figure;
+for pc = 1:nPCs
+    subplot(1,nPCs,pc)
+    
+    % Sort variables by loading weight (absolute value)
+    [~, idx] = sort(coeff(:,pc), 'descend');
+    
+    % % Example: use effect size to scale marker size
+    % effectSize = abs(coeff(idx,pc)); 
+    % markerSizes = 50 + 200 * effectSize / max(effectSize);
+    
+    % Plot loadings with marker size representing effect size
+    scatter(coeff(idx,pc), 1:length(idx), 'c','filled'); hold on;
+    
+    % Style
+    set(gca,'YTick',1:length(idx), 'YTickLabel', varsForPCA(idx)); % varNames on y-axis
+    set(gca,'YDir','reverse'); % so top = first in list
+    xline(0,'k-');             % reference line
+    xline(0.2,'k--'); 
+    xline(-0.2,'k--'); 
+    title(['PC ' num2str(pc) ' (' num2str(round(explained(pc),1)) '%)']);
+    xlabel('Loading weight');
+    ylabel('Variables');
+end
+
+% Plot score and into a violin plot 
+
+% Line score and label to plot 
+figure
+for vv = 1%length(varsForPCA)
+    nexttile
+    Violin2(score(dhi_table.ConcussLabel==0,vv),1,'Showdata',true,'Sides','Left','ShowMean',true);
+    Violin2(score(dhi_table.ConcussLabel==1,vv),1,'Showdata',true,'Sides','Right','ShowMean',true);
+    title(sprintf('PCA %1.0f', vv), 'Interpreter', 'none');
+    
+end
+
+
+vv=1;
+[h,p,ci,stats] = ttest2(score(dhi_table.ConcussLabel==0,vv),score(dhi_table.ConcussLabel==1,vv));
+fprintf("\t H: %d p: %d\n",h,p)
+
+% for subInfo
+
+figure
+for vv = 1%length(varsForPCA)
+    nexttile
+    Violin2(score(dhi_table.ConcussLabel==0,vv),1,'Showdata',true,'Sides','Left','ShowMean',true);
+    Violin2(score(dhi_table.ConcussLabel==1,vv),1,'Showdata',true,'Sides','Right','ShowMean',true);
+    title(sprintf('PCA %1.0f', vv), 'Interpreter', 'none');    
+end
+
+vv=1;
+[h,p,ci,stats] = ttest2(score(subInfo.ConcussLabel==0,vv),score(subInfo.ConcussLabel==1,vv));
+fprintf("\t H: %d p: %d\n",h,p)
+
+%% Just DHI Participants
+
+% dhi_table = subInfo(1:22,:);
+
+varName = dhi_table.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% plot
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+    
+    [h,p,ci,stats] = ttest2(xData(dhi_table.ConcussLabel==0),xData(dhi_table.ConcussLabel==1));
+    fprintf("Stats for variable: %s\n",xVar)
+    fprintf("\t H: %d p: %d\n",h,p)
+end
+
+% Plot violin
+for xx = 1:length(xIdx)
+    figure
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+    Violin2(xData(dhi_table.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+    Violin2(xData(dhi_table.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+    title(sprintf('Violin Plot %s', xVar), 'Interpreter', 'none');
+    % ylim([2000 9000])
+    % saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+    
+end
+
+
+%% Results Section
+
+% Pick to plot table
+varName = dhi_table.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, ~] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% Step count – activity rate. 
+% miniBEST Score
+% Symptom Score
+% plot
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+
+    fprintf("Mean %s Healthy  mTBI \n %1.2f (%1.2f)  %1.2f (%1.2f)\n", ...
+        string(varName{xIdx(xx)}),mean(nonzeros(xData(dhi_table.ConcussLabel==0))),std(nonzeros(xData(dhi_table.ConcussLabel==0))),...
+        mean(nonzeros(xData(dhi_table.ConcussLabel==1))),std(nonzeros(xData(dhi_table.ConcussLabel==1))))
+    
+end
+
+%% CV
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+
+    fprintf("CV %s Healthy  mTBI \n %1.2f (%1.2f)  %1.2f (%1.2f)\n", ...
+        string(varName{xIdx(xx)}),...
+        std(nonzeros(xData(dhi_table.ConcussLabel==0)))/mean(nonzeros(xData(dhi_table.ConcussLabel==0))),std(std(nonzeros(xData(dhi_table.ConcussLabel==0)))/mean(nonzeros(xData(dhi_table.ConcussLabel==0)))),...
+        std(nonzeros(xData(dhi_table.ConcussLabel==1)))/mean(nonzeros(xData(dhi_table.ConcussLabel==1))),std(std(nonzeros(xData(dhi_table.ConcussLabel==1)))/mean(nonzeros(xData(dhi_table.ConcussLabel==1)))))
+    
+end
+
+%% Correlation between in-lab and life
+
+
+[r, p] = corr(dhi_table.head_amplitudedailyMean, dhi_table.amplitude);
+fprintf('Amplitude Daily Mean: r = %.2f, p = %.4f\n', r, p);
+
+[r, p] = corr(dhi_table.head_amplitudedailyP95, dhi_table.amplitude);
+fprintf('Amplitude P95: r = %.2f, p = %.4f\n', r, p);
+
+
+[r, p] = corr(dhi_table.head_angVelocitydailyMean, dhi_table.angVelocity);
+fprintf('AngVelocity Daily Mean: r = %.2f, p = %.4f\n', r, p);
+
+[r, p] = corr(dhi_table.head_angVelocitydailyP95, dhi_table.angVelocity);
+fprintf('AngVelocity P95: r = %.2f, p = %.4f\n', r, p);

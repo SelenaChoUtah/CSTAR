@@ -9,7 +9,7 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
 
     % Find indexs of valid minima - filtVertGyro is abs signal
     filtVertGyro = abs(filtVertGyro);
-    [~, loc] = findpeaks(filtVertGyro,'MinPeakHeight',minima); 
+    [~, loc] = findpeaks(-filtVertGyro,'MinPeakHeight',-minima); 
 
     % figure
     % plot(filtVertGyro)
@@ -121,10 +121,10 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
     turnInfo.angVelocity = validAngVel;
     turnInfo.startstop = stsp;
 
-    figure
-    hold on    
-    plot(absFiltData)
-    plot(mergeStartStop,absFiltData(mergeStartStop),'*')
+    % figure
+    % hold on    
+    % plot(absFiltData)
+    % plot(mergeStartStop,absFiltData(mergeStartStop),'*')
     % plot(filtData)
     % 
     % t = 0:1/100:(6203380-6203270)/100;
