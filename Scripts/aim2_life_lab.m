@@ -10,7 +10,6 @@ addpath(genpath('DHI_data\'))
 subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
 
 % Load Life Data
-
 currentFoldPath = cd;
 processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
 processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
@@ -46,7 +45,6 @@ for i = 1:length(subID)
 end
 
 % Generating a lot of daily life stats and saving to subInfo
-
 samplingRate = 100;
 samplesPerHour = 3600 * samplingRate;
 variables = ["amplitude", "angVelocity"];

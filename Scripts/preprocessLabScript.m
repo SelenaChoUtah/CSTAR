@@ -27,7 +27,7 @@ subjectnum = subfolder(listdlg('PromptString',{'Select Subjects to Process',''},
 % -Preprocess APDM OPAL Data---------------------------------------------%
 for i = 1:length(subjectnum)  
     opal.(string(subjectnum(i).name)) = opalPreProcess(subjectnum(i));
-    % bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i));    
+    bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i));    
    % polar.(string(subjectnum(i).name)) = polarPreProcess(subjectnum(i));
 end
 
