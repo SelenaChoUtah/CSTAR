@@ -19,13 +19,15 @@ subjectnum = subfolder(listdlg('PromptString',{'Select Subjects to Process',''},
         'SelectionMode','multiple','ListString',{subfolder.name}));
 
 % -Preprocess APDM OPAL Data---------------------------------------------%
+fprintf("Preprocess Opal and Bittium Raw Data\n")
 for i = 1:length(subjectnum)  
+    % fprintf("Subject: %s\n",subjectnum(i).name)
     opal.(string(subjectnum(i).name)) = opalPreProcess(subjectnum(i));
     bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i)); 
 end
 
-%% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fprintf("Segment Bittium Data\n")
 clearvars segmentPolarStruct segmentBit
 fn = fieldnames(bittium);
 for b = 1:length(fn)
@@ -38,52 +40,41 @@ for b = 1:length(fn)
     end
 
     % Segmenting the bittium data
-    segmentBit.(fn{b}) = segmentBittium(bittium.(fn{b}),timepoint,timeLength,sternum);
-    % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);   
+    segmentBit.(fn{b}) = segmentBittium(bittium.(fn{b}),timepoint,timeLength,sternum); 
 end
 
-%% plot
+%% 2. Save Preprocess data
 
-figure
-id = fieldnames(segmentBit);
-for ii = 1:length(id)
-    nexttile
-    plot(segmentBit.(id{ii}).YOYO.acc)
-    title(id{ii})
-    ylim([-200 200])
-end
-%%
-figure
-id = fieldnames(opal);
-for ii = 1:length(id)
-    nexttile
-    plot(opal.(id{ii}).YOYO.lumbar.acc)
-    title(id{ii})
-    % ylim([-200 200])
-end
+currentPath = 'D:\CSTAR\DHI_data';
 
-%% Segment Axivity Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Resample data
-subject = resampleAxivity(subjectnum);
-
-% Rotate all sensors - Alignment will be done later
-axivity = reorientAxivityInitial(subject);
-
-clearvars segmentAxivity
-id = fieldnames(opal);
-for ii = 1:length(id)
-    % Gathering timepoints from opal data
-    tasks = fieldnames(opal.(id{ii}));
-    clearvars timeLength timepoint
-    for tt = 1:length(tasks)
-        % timepoints from opal
-        timepoint.(tasks{tt}) = opal.(id{ii}).(tasks{tt}).timepoint+seconds(1)/3;
-        timeLength.(tasks{tt}) = length(opal.(id{ii}).(tasks{tt}).head.time);     
+% Saving Opal Data
+disp("Saving Opal Data")
+subID = fieldnames(opal);
+for i = 1:length(subID)    
+    % Create preprocessed folder
+    subIDFolder = strcat(currentPath,'\PreprocessData\Lab\Opal\', subID{i},filesep);
+    if ~isfolder(subIDFolder)
+        mkdir(subIDFolder)
     end
 
-    % Segment Axivity
-    segmentAxivity.(id{ii}) = axivityPreprocess(axivity.(id{ii}), timepoint, timeLength);
-
+    data = opal.(subID{i});
+    savePath = fullfile(subIDFolder,'data.mat');
+    save(savePath, '-struct','data'); 
+    disp(append("Saved Subject ",subID{i}))
 end
 
+% Saving Segmented Bittium Data
+disp("Saving Segmented Bittium Data")
+subID = fieldnames(segmentBit);
+for i = 1:length(subID)    
+    % Create preprocessed folder
+    subIDFolder = strcat(currentPath,'\PreprocessData\Lab\Bittium\', subID{i},filesep);
+    if ~isfolder(subIDFolder)
+        mkdir(subIDFolder)
+    end
+
+    data = segmentBit.(subID{i});
+    savePath = fullfile(subIDFolder,'data.mat');
+    save(savePath, '-struct','data'); 
+    disp(append("Saved Subject ",subID{i}))
+end
