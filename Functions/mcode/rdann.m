@@ -121,6 +121,9 @@ end
 %Remove file extension if present
 if(length(recordName)>4 && strcmp(recordName(end-3:end),'.dat'))
     recordName=recordName(1:end-4);
+    % recordName=recordName;
+elseif length(recordName)>4
+    recordName=recordName(end-5:end);
 end
 
 wfdb_argument={'-r',recordName,'-a',annotator};

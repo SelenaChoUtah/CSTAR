@@ -35,3 +35,83 @@ for ss = 1:length(subID)
         taskData.(subID{ss}).(task{tt}).lumbar = opalData.(subID{ss}).(task{tt}).lumbar;
     end
 end
+
+%% Summarizing Beat-to-Beat Heart Rate
+
+% identify QRS Complex
+subID = fieldnames(taskData);
+figure
+for ss = 1:length(subID)
+    for tt = 1:length(task)
+        recordName = subID{ss};
+        folderName = 'DHI_data\PreprocessData\Lab\physionetFormat';
+        folderVariable = task{tt};
+        fs = taskData.(subID{ss}).(task{tt}).bittium.fsEcg;
+        ecgData = taskData.(subID{ss}).(task{tt}).bittium.ecg;
+        taskData.(subID{ss}).(task{tt}).HR = turnDatFile(recordName,fs,ecgData,folderName,folderVariable);
+    end
+    nexttile
+    plot(taskData.(subID{ss}).(task{tt}).HR.time,taskData.(subID{ss}).(task{tt}).HR.signal(:,1))
+    hold on
+    plot(taskData.(subID{ss}).(task{tt}).HR.time(taskData.(subID{ss}).(task{tt}).HR.ann),taskData.(subID{ss}).(task{tt}).HR.signal(taskData.(subID{ss}).(task{tt}).HR.ann,1),'ro')
+end
+
+% The Hilbert transform [11] was applied to extract the envelope of each 
+% QRS complex, with the area under the curve used as a signal-to-noise ratio measure
+
+% The beat-to-beat HR was computed from these identified complexes and 
+% smoothed over a 5-beat rolling window to account for potential 
+% irregularities (e.g., atrial fibrillation). 
+
+%%
+figure
+subID = fieldnames(taskData);
+for ss = 2%1:length(subID)
+    nexttile
+    plot(taskData.(subID{ss}).(task{tt}).HR.time,taskData.(subID{ss}).(task{tt}).HR.signal(:,1))
+    hold on
+    plot(taskData.(subID{ss}).(task{tt}).HR.time(taskData.(subID{ss}).(task{tt}).HR.ann),taskData.(subID{ss}).(task{tt}).HR.signal(taskData.(subID{ss}).(task{tt}).HR.ann,1),'ro')
+end
+
+% figure
+    % plot(tm,signal(:,1));hold on;grid on
+    % plot(tm(ann),signal(ann,1),'ro')
+%% Turn into Dat, Header, WQRS files - wfbd toolbox
+
+subjects = fieldnames(interest);
+for s = 1:length(subjects)
+    recordName = subjects{s};
+    folderName = 'physionetFormat';
+    folderVariable = 'Buffalo';
+    fs = interest.(subjects{s}).(folderVariable).fs;
+    ecgData = interest.(subjects{s}).Buffalo.ecg;
+    turnDatFile(recordName,fs,ecgData,folderName,folderVariable)
+end
+
+%% figure
+for i = 1:length(subjects)
+    figure
+    recordName = fullfile('physionetFormat',folderVariable,subjects{i},subjects{i});
+    [signal, ~, tm] = rdsamp(recordName);
+    N = length(signal);
+    ann = rdann(recordName,'wqrs',[],N);
+    buffaloTask.(subjects{i}).rrIntervals = ann;
+    fs = interest.(subjects{s}).(folderVariable).fs;
+    [heartRate, time] = rr2bpm(ann, fs);
+    buffaloTask.(subjects{i}).heartRate = heartRate;
+    buffaloTask.(subjects{i}).hrTime = time;
+
+    plot(tm,signal(:,1));hold on;grid on
+    plot(tm(ann),signal(ann,1),'ro')
+    % bpm = rr2bpm(diff(ann));
+    % plot(bpm)
+    % % Plot the heart rate
+    % plot(time/60,heartRate);
+    % % plot(time, heartRate, '-o');
+    % xlabel('Time (min)');
+    % ylabel('Heart Rate (beats per minute)');
+    % title(string(subjects{i}));
+    % axis tight
+    % grid on;
+    % ylim([60 200])
+end
