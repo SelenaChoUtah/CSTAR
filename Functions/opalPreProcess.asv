@@ -184,7 +184,7 @@ function opal = opalPreProcess(subjectnum)
             elseif strncmp(rrData.sensor(i).monitorLabel,"Sternum",4)
                 sens = "sternum";
                 opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration(:,1) rrData.sensor(i).acceleration(:,2) rrData.sensor(i).acceleration(:,3)];
-                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation(:,1) rrData.sensor(i).rotation(:,2) rrData.sensor(i).rotation(:,3)];
+                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation.x' rrData.sensor(i).rotation.y' rrData.sensor(i).rotation.z'];
                 opal.(string(combinedCsv.Condition(t))).(sens).time = (0:1/fsr:(length(opal.(string(combinedCsv.Condition(t))).(sens).acc)-1)/fsr);            
                 
                 % Rotate Correctly for supine2stand, it starts lying down

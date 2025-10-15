@@ -39,7 +39,27 @@ for b = 1:length(fn)
 
     % Segmenting the bittium data
     segmentBit.(fn{b}) = segmentBittium(bittium.(fn{b}),timepoint,timeLength,sternum);
-    % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);
+    % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);   
+end
+
+%% plot
+
+figure
+id = fieldnames(segmentBit);
+for ii = 1:length(id)
+    nexttile
+    plot(segmentBit.(id{ii}).YOYO.acc)
+    title(id{ii})
+    ylim([-200 200])
+end
+%%
+figure
+id = fieldnames(opal);
+for ii = 1:length(id)
+    nexttile
+    plot(opal.(id{ii}).YOYO.lumbar.acc)
+    title(id{ii})
+    % ylim([-200 200])
 end
 
 %% Segment Axivity Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
