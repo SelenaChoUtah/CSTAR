@@ -13,14 +13,14 @@
 % Is daily useful? Clinical test may not show or it offers more comprehension
 %--------------------------------------------------------------------------
 
-cd('C:\Users\chose\Box\DHI-Lab')
+% cd('C:\Users\chose\Box\DHI-Lab')
+cd('D:\CSTAR\DHI_data')
 addpath(genpath('Data\'))
 addpath(genpath('RawData\'))
 addpath(genpath('PreprocessData\'))
 addpath(genpath('CSTAR\'))
 
-%% 1. Preprocess the lab data
-
+% 1. Preprocess the lab data
 currentPath = cd;
 subjectpath = fullfile(currentPath,'RawData','Lab');
 subfolder = dir(subjectpath);
@@ -61,6 +61,8 @@ for ii = 1:length(id)
 end
 
 %% 2. Save Preprocess data
+
+currentPath = 'D:\CSTAR\DHI_data';
 
 % Saving Opal Data
 disp("Saving Opal Data")
