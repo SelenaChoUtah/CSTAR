@@ -20,7 +20,7 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
         swayAP = fullAP(calibrateWindow(c,1):calibrateWindow(c,2));
 
-        if fullWindow(c,2) < length(fullV)
+        if fullWindow(c,2) <= length(fullV)
             sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
             sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
             sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));        

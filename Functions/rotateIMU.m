@@ -23,7 +23,7 @@ function [A_data,Rot_data] = rotateIMU(accData,order,Fc,Fs,fullWindow,calibrateW
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
         swayAP = fullAP(calibrateWindow(c,1):calibrateWindow(c,2));
 
-        if fullWindow(c,2) < length(fullV)            
+        if fullWindow(c,2) <= length(fullV)            
             sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
             sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
             sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));        
