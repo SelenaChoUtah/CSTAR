@@ -66,7 +66,7 @@ end
 %%
 figure
 subID = fieldnames(taskData);
-for ss = 1:length(subID)
+for ss = 2%1:length(subID)
     nexttile
     plot(taskData.(subID{ss}).(task{tt}).HR.time,taskData.(subID{ss}).(task{tt}).HR.signal(:,1))
     hold on
@@ -78,7 +78,7 @@ figure
 subID = fieldnames(taskData);
 for ss = 1:length(subID)
     nexttile
-    plot(taskData.(subID{ss}).(task{tt}).HR.heartRate)
+    plot(diff(taskData.(subID{ss}).(task{tt}).HR.ann))
     % hold on
     % plot(taskData.(subID{ss}).(task{tt}).HR.time(taskData.(subID{ss}).(task{tt}).HR.ann),taskData.(subID{ss}).(task{tt}).HR.signal(taskData.(subID{ss}).(task{tt}).HR.ann,1),'ro')
 end

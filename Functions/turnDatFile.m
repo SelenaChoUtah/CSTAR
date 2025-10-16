@@ -91,6 +91,14 @@ function data = turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     saveDataPath = fullfile(outputDir,'data.mat');
     save(saveDataPath, '-struct', 'data');
 
+    %% ecgpuwave
+    figure
+    ecgpuwave(fullfile(outputDir, recordName),fullfile(outputDir, recordName,'test'))
+    [signal,Fs,tm]=rdsamp(fullfile(outputDir, recordName));
+    pwaves=rdann(fullfile(outputDir, recordName),'test',[],[],[],'p');
+    plot(tm,signal(:,1));hold on;grid on
+    plot(tm(pwaves),signal(pwaves),'or')
+
    
     
 

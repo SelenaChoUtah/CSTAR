@@ -89,12 +89,12 @@ function ecgpuwave(varargin)
 % %Example - Will go into the WFDB directory of examples to load data
 %curdir=pwd;
 %[~,config]=wfdbloadlib;eval(['cd ' config.WFDB_JAVA_HOME filesep 'example'])
-% ecgpuwave('100s','test');
-% [signal,Fs,tm]=rdsamp('100s');
-% pwaves=rdann('100s','test',[],[],[],'p');
-% figure
-% plot(tm,signal(:,1));hold on;grid on
-% plot(tm(pwaves),signal(pwaves),'or')
+ecgpuwave('100s','test');
+[signal,Fs,tm]=rdsamp('100s');
+pwaves=rdann('100s','test',[],[],[],'p');
+figure
+plot(tm,signal(:,1));hold on;grid on
+plot(tm(pwaves),signal(pwaves),'or')
 %cd(curdir) %CD back to current directory
 %
 %
