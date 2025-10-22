@@ -191,7 +191,7 @@ for ss = 1:length(sensor)
 end
 
 %% 7) Ribbon Plot Days vs Hours
-close all
+% close all
 [day,hr] = meshgrid(1:6,1:24);
 figure
 plot3(day,hr,placeData.head.turnsPer24hr,'LineWidth',5)
@@ -200,6 +200,30 @@ ylabel("hour in day")
 zlabel("Number of turns per hour")
 set(gca, 'YDir', 'reverse');
 grid on
+
+%%
+
+% Define Axes
+hours = 1:24;          % Hours of the day
+days = {'Friday', 'Saturday', 'Sunday','Monday', 'Tuesday', 'Wednesday', 'Thursday'};
+
+% Create the Ribbon Plot
+figure;
+ribbon(hours, placeData.head.turnsPer24hr.S16);
+
+% Customize the Axes and Labels
+xticks(1:7);                     % Set x-axis ticks for days
+xticklabels(days);               % Replace x-axis ticks with day names
+xlabel('Day of the Week');       
+ylabel('Hour of the Day');
+zlabel('Head Turns');
+title('3D Ribbon Plot: Head Turns by Hour and Day');
+
+% Enhance Visuals
+colormap(jet);                   % Apply a colormap
+grid on;
+view([-45, 30]);   
+exportgraphics(gcf, '3DPlot.pdf', 'ContentType', 'vector');
 
 
 %% 

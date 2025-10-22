@@ -1,11 +1,10 @@
 %% Add Paths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% addpath(genpath(pwd))
-clear
-addpath('Data\')
-addpath(genpath('RawData\'))
-addpath('CSTAR\')
-addpath('Analysis\')
-
+addpath(genpath(pwd))
+% clear
+% addpath('Data\')
+% addpath(genpath('RawData\'))
+% addpath('CSTAR\')
+% addpath('Analysis\')
 
 %--------------------------------------------------------------------------
 % This script preprocesses data for multiple subjects and sessions,
@@ -27,11 +26,11 @@ subjectnum = subfolder(listdlg('PromptString',{'Select Subjects to Process',''},
 % -Preprocess APDM OPAL Data---------------------------------------------%
 for i = 1:length(subjectnum)  
     opal.(string(subjectnum(i).name)) = opalPreProcess(subjectnum(i));
-    % bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i));    
+    bittium.(string(subjectnum(i).name)) = bittiumPreProcess(subjectnum(i));    
    % polar.(string(subjectnum(i).name)) = polarPreProcess(subjectnum(i));
 end
 
-%% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Segment Bittium Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clearvars segmentPolarStruct segmentBit
 fn = fieldnames(bittium);
@@ -48,6 +47,68 @@ for b = 1:length(fn)
     segmentBit.(fn{b}) = segmentBittium(bittium.(fn{b}),timepoint,timeLength,sternum);
     % segmentPolarStruct.(fn{b}) = segmentPolar(polar.(fn{b}), timepoint, timeLength);
 end
+
+% Save Data 
+clearvars b tasks tt timepoint timeLength sternum 
+
+% Preprocess Folder
+prepath = fullfile(currentPath,'Data/preprocess');
+preFolder = dir(prepath);
+
+% opal folder 
+opalpath = fullfile(prepath,"opal/");
+% bittium - full data folder
+bitfullpath = fullfile(prepath,"bittium/");
+% segmentBit - full data folder
+segfullpath = fullfile(prepath,"segmentedBittium/");
+% segmentPolar - full data folder
+polarfullpath = fullfile(prepath,"segmentedPolar/");
+% segmentAxivity - full data folder
+axivityfullpath = fullfile(prepath,"axivity/");
+
+id = fieldnames(opal);
+fn = fieldnames(bittium);
+for ii = 1:length(id)
+%     Save opal Data
+    subIDFold = strcat(opalpath, id{ii},filesep);
+    if ~isfolder(subIDFold)
+        mkdir(subIDFold)
+    end
+    savePath = strcat(subIDFold,'data.mat');
+    opalData = opal.(id{ii});
+    save(savePath, '-struct', 'opalData');
+
+    % savePath = fullfile(opalpath, [char(id(f)) '.mat']);
+    % save(savePath, '-struct', 'opal', char(id(f)));
+
+% %     Save Full Bittium Data
+%     subIDFold = strcat(bitfullpath, id{ii},filesep);
+%     if ~isfolder(subIDFold)
+%         mkdir(subIDFold)
+%     end
+%     savePath = strcat(subIDFold,'data.mat');
+%     bittiumData = bittium.(id{ii});
+%     save(savePath, '-struct', 'bittiumData');
+
+%     Save Segmented Bittium Data
+    subIDFold = strcat(segfullpath, id{ii},filesep);
+    if ~isfolder(subIDFold)
+        mkdir(subIDFold)
+    end
+    savePath = strcat(subIDFold,'data.mat');
+    segbittiumData = segmentBit.(id{ii});
+    save(savePath, '-struct', 'segbittiumData');
+
+%     Save Segmented Polar Data
+    % polarFullPath = fullfile(polarfullpath,[char(id(f)) '.mat']);
+    % save(polarFullPath, '-struct', 'segmentPolarStruct', char(fn(f)));
+
+    % Save Segmented Axivity Data
+    % axivityFullPath = fullfile(axivityfullpath,[char(id(f))]);
+    % save(axivityFullPath, '-struct', 'segmentAxivity', char(id(f)));
+end
+
+
 
 %% Segment Axivity Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -123,47 +184,6 @@ for ii = 1:length(id)
     end
 end
 
-
-%%
-clearvars fn b tasks tt timepoint timeLength sternum 
-
-% Preprocess Folder
-prepath = fullfile(currentPath,'Data/preprocess');
-preFolder = dir(prepath);
-
-% opal folder 
-opalpath = fullfile(prepath,"opal/");
-% bittium - full data folder
-bitfullpath = fullfile(prepath,"bittium/");
-% segmentBit - full data folder
-segfullpath = fullfile(prepath,"segmentedBittium/");
-% segmentPolar - full data folder
-polarfullpath = fullfile(prepath,"segmentedPolar/");
-% segmentAxivity - full data folder
-axivityfullpath = fullfile(prepath,"axivity/");
-
-id = fieldnames(opal);
-for f = 1:length(id)
-%     Save opal Data
-    savePath = fullfile(opalpath, [char(id(f)) '.mat']);
-    save(savePath, '-struct', 'opal', char(id(f)));
-
-% %     Save Full Bittium Data
-%     bitPath = fullfile(bitfullpath,[char(id(f)) '.mat']);
-%     save(bitPath, '-struct', 'segmentBit', char(id(f)));
-
-% %     Save Segmented Bittium Data
-%     segPath = fullfile(segfullpath,[char(id(f)) '.mat']);
-%     save(segPath, '-struct', 'segmentBit', char(fn(f)));
-
-%     Save Segmented Polar Data
-    % polarFullPath = fullfile(polarfullpath,[char(id(f)) '.mat']);
-    % save(polarFullPath, '-struct', 'segmentPolarStruct', char(fn(f)));
-
-    % Save Segmented Axivity Data
-    axivityFullPath = fullfile(axivityfullpath,[char(id(f))]);
-    save(axivityFullPath, '-struct', 'segmentAxivity', char(id(f)));
-end
 
 %% Save Data into each individual folder
 
