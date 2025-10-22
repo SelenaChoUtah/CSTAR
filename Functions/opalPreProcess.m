@@ -141,7 +141,7 @@ function opal = opalPreProcess(subjectnum)
 
     for t = 1:height(combinedCsv)
         % Convert datetime to hours:minutes:seconds
-        if startsWith('MDT',combinedCsv.(string(idx)){t}(end-2:end))
+        if startsWith('MDT',combinedCsv.(string(idx)){t}(end-2:end)) || startsWith('MST',combinedCsv.(string(idx)){t}(end-2:end))
             time = datetime({combinedCsv.(string(idx)){t}(1:15)}, 'InputFormat', 'yyyyMMdd-HHmmss','TimeZone','America/Denver','Format','HH:mm:ss');
             opal.(string(combinedCsv.Condition(t))).timepoint = time;
         else
@@ -161,8 +161,8 @@ function opal = opalPreProcess(subjectnum)
         for i = 1:length(raw.sensor)
             if strncmp(rrData.sensor(i).monitorLabel,"Forehead",4)
                 sens = "head";    
-                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration];
-                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation];
+                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration(:,1) rrData.sensor(i).acceleration(:,2) rrData.sensor(i).acceleration(:,3)];
+                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation(:,1) rrData.sensor(i).rotation(:,2) rrData.sensor(i).rotation(:,3)];
                 opal.(string(combinedCsv.Condition(t))).(sens).time = (0:1/fsr:(length(opal.(string(combinedCsv.Condition(t))).(sens).acc)-1)/fsr);            
                 
                 % Rotate Correctly for supine2stand, it starts lying down
@@ -172,8 +172,8 @@ function opal = opalPreProcess(subjectnum)
                 end
             elseif strncmp(rrData.sensor(i).monitorLabel,"Lumbar",4)
                 sens = "lumbar";
-                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration];
-                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation];
+                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration(:,1) rrData.sensor(i).acceleration(:,2) rrData.sensor(i).acceleration(:,3)];
+                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation(:,1) rrData.sensor(i).rotation(:,2) rrData.sensor(i).rotation(:,3)];
                 opal.(string(combinedCsv.Condition(t))).(sens).time = (0:1/fsr:(length(opal.(string(combinedCsv.Condition(t))).(sens).acc)-1)/fsr);            
                 
                 % Rotate Correctly for supine2stand, it starts lying down
@@ -183,8 +183,8 @@ function opal = opalPreProcess(subjectnum)
                 end
             elseif strncmp(rrData.sensor(i).monitorLabel,"Sternum",4)
                 sens = "sternum";
-                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration];
-                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation];
+                opal.(string(combinedCsv.Condition(t))).(sens).acc = [rrData.sensor(i).acceleration(:,1) rrData.sensor(i).acceleration(:,2) rrData.sensor(i).acceleration(:,3)];
+                opal.(string(combinedCsv.Condition(t))).(sens).gyro = [rrData.sensor(i).rotation(:,1) rrData.sensor(i).rotation(:,2) rrData.sensor(i).rotation(:,3)];
                 opal.(string(combinedCsv.Condition(t))).(sens).time = (0:1/fsr:(length(opal.(string(combinedCsv.Condition(t))).(sens).acc)-1)/fsr);            
                 
                 % Rotate Correctly for supine2stand, it starts lying down

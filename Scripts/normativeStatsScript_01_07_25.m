@@ -460,6 +460,7 @@ for ii = 1:length(id)
     end
 end
 
+
 %% Ribbon Plots
 
 % Rows: Hours (1 to 24), Columns: Days (Monday to Sunday)
@@ -517,5 +518,67 @@ for ii = 1:length(id)
         [~,pp.(id{ii})(nn,1),CI.(id{ii})(nn,1),tstat.(id{ii})(nn,1)] = ttest(placeData.head.turnsPer24hr.(id{ii})(:,nn), placeData2.head.turnsPer24hr.(id{ii})(:,nn));
     end
 end
+
+
+%% Head-on-trunk Turns
+
+hot = struct();
+% Stable v Volitional
+id = fieldnames(data);
+for ii = 1:length(id)
+    days = fieldnames(data.(id{ii}).headOnTrunkCount);
+    for dd = 1:length(days)
+        turnType = fieldnames(data.(id{ii}).headOnTrunkCount.(days{dd}));
+        for tt = 1:2%length(turnType)
+            variables = fieldnames(data.(id{ii}).headOnTrunkCount.(days{dd}).(turnType{tt}));
+            for vv = 1:length(variables)
+                meanVar.(id{ii}).(turnType{tt}).(variables{vv})(dd) = mean(data.(id{ii}).headOnTrunkCount.(days{dd}).(turnType{tt}).(variables{vv}));
+                stdVar.(id{ii}).(turnType{tt}).(variables{vv})(dd) = std(data.(id{ii}).headOnTrunkCount.(days{dd}).(turnType{tt}).(variables{vv}));
+            end
+        end
+    end   
+end
+for ii = 1:length(id)
+    turnType = fieldnames(meanVar.(id{ii}));
+    for tt = 1:2%length(turnType)
+        variables = fieldnames(meanVar.(id{ii}).(turnType{tt}));
+        for vv = 1:length(variables)
+            hot.(turnType{tt}).(variables{vv})(ii,1) = round(mean(meanVar.(id{ii}).(turnType{tt}).(variables{vv})),2);
+            hot.(turnType{tt}).(variables{vv})(ii,2) = round(std(meanVar.(id{ii}).(turnType{tt}).(variables{vv})),2);
+        end
+    end
+end
+for tt = 1:2%length(turnType)
+    variables = fieldnames(meanVar.(id{ii}).(turnType{tt}));
+    for vv = 1:length(variables)
+        hotTable.(turnType{tt}).(variables{vv}) = mean(hot.(turnType{tt}).(variables{vv}));
+    end
+end
+
+% Head-on-trunk Turn
+id = fieldnames(data);
+for ii = 1:length(id)
+    days = fieldnames(data.(id{ii}).headOnTrunkCount);
+    for dd = 1:length(days)
+        turnType = fieldnames(data.(id{ii}).headOnTrunkCount.(days{dd}));
+        for tt = 3:length(turnType)
+            meanVar.(id{ii}).(turnType{tt})(dd) = data.(id{ii}).headOnTrunkCount.(days{dd}).(turnType{tt});
+        end
+    end   
+end
+for ii = 1:length(id)
+    turnType = fieldnames(meanVar.(id{ii}));
+    for tt = 3:length(turnType)
+        hot.(turnType{tt})(ii,1) = round(mean(meanVar.(id{ii}).(turnType{tt})),2);
+        hot.(turnType{tt})(ii,2) = round(std(meanVar.(id{ii}).(turnType{tt})),2);        
+    end
+end
+for tt = 3:length(turnType)
+    hotTable.(turnType{tt}) = mean(hot.(turnType{tt}));
+end
+
+
+
+
 
 

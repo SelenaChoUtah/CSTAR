@@ -9,7 +9,12 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
 
     % Find indexs of valid minima - filtVertGyro is abs signal
     filtVertGyro = abs(filtVertGyro);
-    [~, loc] = findpeaks(-filtVertGyro,'MinPeakHeight',-minima);    
+    [~, loc] = findpeaks(-filtVertGyro,'MinPeakHeight',-minima); 
+
+    % figure
+    % plot(filtVertGyro)
+    % hold on
+    % plot(loc,filtVertGyro(loc),'*')
 
     % Step 4: Verify Maxima is Sufficiently Large: Detect the maximum 
     % between each pair of adjacent minima. If the maximum is
@@ -24,6 +29,13 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
             validTurn(vv,1) = loc(ll)+I;
             vv = vv+1;
         end
+    end
+
+    if isempty(validTurn)
+        turnInfo.amplitude = [];
+        turnInfo.angVelocity = [];
+        turnInfo.startstop = [];
+        return;
     end
 
     %% Step 5: Find Turn Start and End: The smoothing used to detect
@@ -64,6 +76,8 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
         ss(vt,2) = t;
     end
 
+    % The unique is another measure to make sure that the it doesn't double
+    % count turns
     startstop = unique(ss,"rows");
 
     % Merge Close Turns within 1/3s in same direction
@@ -74,6 +88,9 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
             if (startstop(hh+1,1) - startstop(hh,2))/100 < 0.33 && (startstop(hh+1,2) - startstop(hh,1))/100 < 5
                 mergeStartStop(end+1,:) = [startstop(hh,1), startstop(hh+1,2)];
                 hh = hh + 2;
+                if hh > height(startstop)
+                    continue
+                end
             end
             mergeStartStop(end+1,:) = startstop(hh,:);
             hh = hh + 1;
@@ -112,5 +129,17 @@ function turnInfo = absShahTurn(filtVertGyro,rawVertGyro,minima,amplitudeThresho
     % plot(absFiltData)
     % plot(mergeStartStop,absFiltData(mergeStartStop),'*')
     % plot(filtData)
+    % 
+    % t = 0:1/100:(6203380-6203270)/100;
+    % figure 
+    % hold on
+    % plot(t,abs(rawVertGyro(6203270:6203380)))
+    % plot(t,absFiltData(6203270:6203380))
+    % yline(5)
+    % legend('unfilt','filt','s','s','threshold')
+    % ylabel('Angular Velocity (deg/s)')
+    % xlabel('Time (sec)')
+    % axis tight
+    % % plot(mergeStartStop,absFiltData(mergeStartStop),'*')
 
 end

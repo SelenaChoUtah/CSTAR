@@ -1,4 +1,4 @@
-function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
+function data = turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
 
 % Converts timeseries ECG data into a PhysioNet-compatible format by 
 % generating a .dat file for signal data and a .hea file for header information.
@@ -59,20 +59,47 @@ function turnDatFile(recordName,fs,ecgData,folderPath,folderVariable)
     fwrite(fid, ecgData, 'int16');
     fclose(fid);
     
-    cd(outputDir)
-    [signal, ~, tm] = rdsamp([recordName, '.dat']);
+    % cd(outputDir)
+    [signal, ~, tm] = rdsamp(fullfile(outputDir, [recordName, '.dat']));
     N = length(signal);
+    data.signal = signal;
+    data.time = tm;
 
     % wavelet instead of gqrs bc it's better for analyzing non-stationary signals,
-    gqrs(recordName,N); % writes annotates *.wqrs
+    gqrs(fullfile(outputDir, recordName),N); % writes annotates *.wqrs
 
     % Needs work to output saved qrs
-    ann = rdann(recordName,'qrs',[],N);
+    % cd(outputDir)
+    % ann = rdann(recordName,'qrs',[],N);
+    ann = rdann(fullfile(outputDir, [recordName,'.dat']),'qrs',[],N);
     [heartRate, time] = rr2bpm(ann, fs);
+
+    % figure
+    % plot(tm,signal(:,1));hold on;grid on
+    % plot(tm(ann),signal(ann,1),'ro')
+
+    data.ann = ann;
+    data.hrTime = time;
+    data.heartRate = heartRate;
+
+    % Create preprocessed folder
+    subIDFolder = strcat(outputDir);
+    if ~isfolder(subIDFolder)
+        mkdir(subIDFolder)
+    end
     
+    saveDataPath = fullfile(outputDir,'data.mat');
+    save(saveDataPath, '-struct', 'data');
+
+    %% ecgpuwave
     figure
+    ecgpuwave(fullfile(outputDir, recordName),fullfile(outputDir, recordName,'test'))
+    [signal,Fs,tm]=rdsamp(fullfile(outputDir, recordName));
+    pwaves=rdann(fullfile(outputDir, recordName),'test',[],[],[],'p');
     plot(tm,signal(:,1));hold on;grid on
-    plot(tm(ann),signal(ann,1),'ro')
-    lsline
+    plot(tm(pwaves),signal(pwaves),'or')
+
+   
+    
 
 end

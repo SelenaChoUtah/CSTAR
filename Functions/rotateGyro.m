@@ -20,32 +20,37 @@ function [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrat
         swayML = fullML(calibrateWindow(c,1):calibrateWindow(c,2));
         swayAP = fullAP(calibrateWindow(c,1):calibrateWindow(c,2));
 
-        sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
-        sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
-        sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));
+        if fullWindow(c,2) <= length(fullV)
+            sectionV = fullV(fullWindow(c,1):fullWindow(c,2));
+            sectionML = fullML(fullWindow(c,1):fullWindow(c,2));
+            sectionAP = fullAP(fullWindow(c,1):fullWindow(c,2));        
         
-        % Filtered data is corrected to original coordinate system and averaged
-        % across each plane, then substracted from it's corrected data to reach
-        % [0,0].
-        trueAP = sectionAP.*(cos(Rot_data(c,1)))- (sectionV).*(Rot_data(c,1));
-        trueVP = sectionAP.*(Rot_data(c,1))+ (sectionV).*(cos(Rot_data(c,1)));
-        trueML = sectionML.*(cos(Rot_data(c,2)))- (trueVP).*(Rot_data(c,2));
-        trueV = sectionML.*(Rot_data(c,2))+(trueVP).*(cos(Rot_data(c,2)));
+            % Filtered data is corrected to original coordinate system and averaged
+            % across each plane, then substracted from it's corrected data to reach
+            % [0,0].
+            trueAP = sectionAP.*(cos(Rot_data(c,1)))- (sectionV).*(Rot_data(c,1));
+            trueVP = sectionAP.*(Rot_data(c,1))+ (sectionV).*(cos(Rot_data(c,1)));
+            trueML = sectionML.*(cos(Rot_data(c,2)))- (trueVP).*(Rot_data(c,2));
+            trueV = sectionML.*(Rot_data(c,2))+(trueVP).*(cos(Rot_data(c,2)));
+        
+            % Estimate of tilt angle
+            sV = mean(swayV);
+            sML = mean(swayML);
+            sAP = mean(swayAP);
     
-        % Estimate of tilt angle
-        sV = mean(swayV);
-        sML = mean(swayML);
-        sAP = mean(swayAP);
-
-        Vert = trueV - sV;
-        ML = trueML - sML;
-        AP = trueAP - sAP;
-
-        actualVert = [actualVert; Vert];
-        actualML = [actualML; ML];
-        actualAP = [actualAP; AP];     
+            Vert = trueV - sV;
+            ML = trueML - sML;
+            AP = trueAP - sAP;
+    
+            actualVert = [actualVert; Vert];
+            actualML = [actualML; ML];
+            actualAP = [actualAP; AP];     
+        else
+            continue
+        end
     
     end
+
 
     G_data = [actualAP actualML actualVert];
 end

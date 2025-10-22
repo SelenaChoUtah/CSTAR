@@ -31,7 +31,7 @@ function segmentBit = segmentBittium(bittium, timepoint, timeLength, sternum)
         start = accIndex;% + timeLag;
         stop = accIndex + timeLength.(task{tt})-1;% + timeLag -1;
         
-        segmentBit.(task{tt}).acc = data.acc(start:stop,:);
+        segmentBit.(task{tt}).acc = data.acc(start:stop,:)./10;
 %         figure
 %         plot(opal.DHI001.(task{tt}).sternum.acc(:,end))
 %         hold on

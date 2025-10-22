@@ -1,9 +1,15 @@
+cd('C:\Users\chose\Box\C-STAR Pilot')
 addpath(genpath('Data\'))
 addpath(genpath('CSTAR\'))
-%%
-currentFoldPath = cd;
 
-preprocessPath = dir(fullfile(currentFoldPath,'\Data\PreProcess'));
+%%
+cd('D:\CSTAR')
+addpath(genpath('Data\'))
+currentFoldPath = cd;
+% CSTAR
+preprocessPath = dir(fullfile(currentFoldPath,'\Data\Preprocess'));
+% DHI-Lab
+% preprocessPath = dir(fullfile(currentFoldPath,'\PreprocessData\Continuous'));
 preprocessPath = preprocessPath(~ismember({preprocessPath.name}, {'.', '..'}));
 subjectnum = preprocessPath(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
         'SelectionMode','multiple','ListString',{preprocessPath.name}));
@@ -39,7 +45,8 @@ for i = 1:numel(subjectnum)
 
         % Apply Rotation Matrix to Long periods of walking        
         daynum = fieldnames(data.(id));        
-        for j = 1:length(daynum)          
+        for j = 1:length(daynum)  
+            fprintf("%s\n", daynum{j});
             try
             sensor = fieldnames(data.(id).(daynum{j}));
             for s = 1:length(sensor)
@@ -118,61 +125,66 @@ for i = 1:numel(subjectnum)
             end
         
             % Head on Trunk Analysis
+            % fprintf("All Head Counts: %f\n", length(saveData.turnData.(daynum{j}).head.amplitude));  
             try
-            if ismember({'head', 'waist'}, sensor)                
-                head = data.(id).(daynum{j}).('head').gyro(:,3);                
-                waist = data.(id).(daynum{j}).('waist').gyro(:,3);
+            if ismember({'head', 'neck', 'waist'}, sensor) 
+                impulseDuration = 1.476;
+                head = abs(data.(id).(daynum{j}).('head').gyro(:,3));
+                neck = abs(data.(id).(daynum{j}).('neck').gyro(:,3));
+                waist = abs(data.(id).(daynum{j}).('waist').gyro(:,3));
                 h = length(head);
+                n = length(neck);
                 w = length(waist);                
                 startstop = saveData.turnData.(daynum{j}).('head').startstop;
-                if h < w
-                    hot = head-waist(1:h);
-                    count = headOnTrunk(hot,startstop);
+                if h < w || h < n
+                    % neck
+                    hot = ShahFilter(head-neck(1:h),impulseDuration,100);  
+                    neckCount = headOnTrunk(hot,startstop,head,neck(1:h));
+                    % waist
+                    hot = ShahFilter(head-waist(1:h),impulseDuration,100); 
+                    waistCount = headOnTrunk(hot,startstop,head,waist(1:h));
                 else
-                    hot = head(1:w)-waist;
-                    count = headOnTrunk(hot,startstop);
+                    % neck
+                    hot = ShahFilter(head(1:n)-neck,impulseDuration,100); 
+                    neckCount = headOnTrunk(hot,startstop,head(1:n),neck);
+                    % waist
+                    hot = ShahFilter(head(1:w)-waist,impulseDuration,100); 
+                    waistCount = headOnTrunk(hot,startstop,head(1:w),waist);
                 end  
-                 saveData.headOnTrunkCount.(daynum{j}) = count;
+                 saveData.headOnNeckCount.(daynum{j}) = neckCount;
+                 saveData.headOnTrunkCount.(daynum{j}) = waistCount;
                  saveData.individual.(daynum{j}) = length(startstop);
+                 
             else
                 disp(append('Missing sensor(s) for Head-on-Trunk  Sensor: ',sensor{s},' ',daynum{j}))
             end
             catch 
-            end   
+                fprintf("Da Heck - %s\n", daynum{j});
+            end 
 
             catch
                 disp(append("Day did not work ",daynum{j}))
             end
-        end        
-        
-        % % Save 
-        % try
-        %     subIDFold = strcat(currentFoldPath,'\Data\Process\', id,filesep);
-        %     if ~isfolder(subIDFold)
-        %         mkdir(subIDFold)
-        %     end
-        %     savePath = strcat(subIDFold,'data.mat');
-        %     save(savePath, '-struct','saveData');
-        % catch
-        %     disp('didnt save')
-        % end
+        end             
+        % Save 
+        try
+            % CSTAR
+            subIDFold = strcat(currentFoldPath,'\Data\Process\', id,filesep);
+            % DHI-Lab
+            % subIDFold = strcat(currentFoldPath,'\ProcessData\Continuous\', id,filesep);
+            % 
+            if ~isfolder(subIDFold)
+                mkdir(subIDFold)
+            end
+            savePath = strcat(subIDFold,'data.mat');
+            save(savePath, '-struct','saveData');
+            disp(append('Save ', id))
+        catch
+            disp('didnt save')
+        end
 
     catch
         disp(append('Error with Subject: ', id))
     end
 end
-
-%% 24 hour data
-
-
-%% Ribbon Plots
-
-dayNum = fieldnames(saveData.turnData);
-
-for dd = 1:length(dayNum)
-    headTurnNum(dd,1) = length(saveData.turnData.(dayNum{dd}).head.amplitude);
-end
-
-
-%% Pulling Filter Plot
 

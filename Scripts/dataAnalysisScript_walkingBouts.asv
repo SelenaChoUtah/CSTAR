@@ -1,0 +1,176 @@
+% cd('C:\Users\chose\Box\C-STAR Pilot')
+cd('D:\CSTAR')
+% cd('C:\Users\chose\Box\DHI-Lab')
+% C:\Users\chose\Box\H&K Fino Lab\Older Adult Concussion - PilotS
+addpath(genpath('Data\'))
+addpath(genpath('PreprocessData\'))
+addpath(genpath('CSTAR\'))
+
+%%
+currentFoldPath = cd;
+% CSTAR
+preprocessPath = dir(fullfile(currentFoldPath,'\Data\PreProcess'));
+
+preprocessPath = preprocessPath(~ismember({preprocessPath.name}, {'.', '..'}));
+subjectnum = preprocessPath(listdlg('PromptString',{'Select Subjects to Process (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{preprocessPath.name}));
+
+for i = 1:numel(subjectnum)     
+    % Save Data into Process
+    id = string(subjectnum(i).name);
+    disp(id)    
+    clearvars data saveData rotate rotate2   
+    % Load Data
+    dayPath = dir(fullfile(subjectnum(i).folder,subjectnum(i).name));
+    dayPath = dayPath(~ismember({dayPath.name}, {'.', '..'}));
+
+    % Gonna try all the days
+    % remove the first and last day because they're not full 24 hour
+    for d = 1:length(dayPath)
+        data.(id).(dayPath(d).name) = load(fullfile(dayPath(d).folder,dayPath(d).name,filesep,'data.mat'));
+    end            
+
+    % McCamley Step Detection - use waist or else neck    
+    daynum = fieldnames(data.(id));   
+    try
+        for j = 1:length(daynum)
+            sensor = fieldnames(data.(id).(daynum{j}));
+            for s = 1:length(sensor)
+                vertAcceleration = data.(id).(daynum{j}).(sensor{s}).acc(:,3);
+                [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration);
+                stepData.(daynum{j}).(sensor{s}) = stepInfo;
+                calibrateData.(daynum{j}).(sensor{s}) = calibrate;
+                saveData.stepData.(daynum{j}).(sensor{s}) = stepInfo;                  
+            end
+        end
+
+        %% Apply Rotation Matrix to Long periods of walking        
+        daynum = fieldnames(data.(id));        
+        for j = 1:length(daynum)  
+            fprintf("%s\n", daynum{j});
+            try
+            sensor = fieldnames(data.(id).(daynum{j}));
+            for s = 1:length(sensor)
+                % try 
+                vertAcc = data.(id).(daynum{j}).(sensor{s}).acc;                
+                wearTimeStruct = wearTime(vertAcc,100);
+                saveData.timeData.(daynum{j}).(sensor{s}) = wearTimeStruct;  
+                saveData.timeData.(daynum{j}).(sensor{s}).dayLength = length(vertAcc);
+                [~,DayName] = weekday(data.(id).(daynum{j}).(sensor{s}).time(1));
+                saveData.timeData.(daynum{j}).(sensor{s}).dayOfWeek = DayName;
+
+                fullWindow = calibrateData.(daynum{j}).(sensor{s}).fullWindow;
+                calibrateWindow = calibrateData.(daynum{j}).(sensor{s}).calibrateWindow;
+                accData = data.(id).(daynum{j}).(sensor{s}).acc;
+                gyroData = data.(id).(daynum{j}).(sensor{s}).gyro;
+                order = 4;
+                Fc = 40;
+                Fs = 100;
+
+                % Rotating Accelerometer
+                [A_data,Rot_data] = rotateIMU(accData,4,40,100,fullWindow,calibrateWindow);
+                % Rotate Gyroscope
+                [G_data] = rotateGyro(gyroData,Rot_data,order,Fc,Fs,fullWindow,calibrateWindow);
+
+                rotate.(id).(daynum{j}).(sensor{s}).acc = A_data;
+                rotate.(id).(daynum{j}).(sensor{s}).gyro = G_data;
+                rotate.(id).(daynum{j}).(sensor{s}).time = data.(id).(daynum{j}).(sensor{s}).time;
+
+                % % Turning Algo
+                % gyro = rotate.(id).(daynum{j}).(sensor{s}).gyro(:,3);
+                % impulseDuration = 1.476;
+                % filterData = ShahFilter(gyro,impulseDuration,100); 
+                % 
+                % amplitudeThreshold = 10; % deg minimum amplitude for head turn
+                % velocityThreshold = 15; % deg/s peak velocity to quantify as turn
+                % minima = 5; % Local Minima     
+                % impulseDuration = 0.2; % Larger value means more smoothed
+                % turnInfo.(id) = absShahTurn(filterData,gyro,minima,amplitudeThreshold,velocityThreshold,impulseDuration);
+                % saveData.turnData.(daynum{j}).(sensor{s}) = turnInfo.(id);
+                % 
+                % % Calibrate the sensor via largest walking bout
+                % [~,c] = max(calibrateWindow(:,2)-calibrateWindow(:,1));                
+                % maxCali = calibrateWindow(c,:);                  
+                % 
+                % accData = data.(id).(daynum{j}).(sensor{s}).acc;
+                % gyroData = data.(id).(daynum{j}).(sensor{s}).gyro;
+                % maxFull = [1 length(accData)];
+                % order = 4;
+                % Fc = 40;
+                % Fs = 100;
+                % 
+                % % Rotating Accelerometer
+                % [A_data2,Rot_data2] = rotateIMU(accData,4,40,100,fullWindow,calibrateWindow);
+                % % Rotate Gyroscope
+                % [G_data2] = rotateGyro(gyroData,Rot_data2,order,Fc,Fs,fullWindow,calibrateWindow);
+                % 
+                % rotate2.(id).(daynum{j}).(sensor{s}).acc = A_data2;
+                % rotate2.(id).(daynum{j}).(sensor{s}).gyro = G_data2;
+                % rotate2.(id).(daynum{j}).(sensor{s}).time = data.(id).(daynum{j}).(sensor{s}).time;
+                % 
+                % % Turning Algo
+                % gyro2 = rotate2.(id).(daynum{j}).(sensor{s}).gyro(:,3);
+                % impulseDuration = 1.476;
+                % filterData = ShahFilter(gyro2,impulseDuration,100); 
+                % 
+                % amplitudeThreshold = 10; % deg minimum amplitude for head turn
+                % velocityThreshold = 10; % deg/s peak velocity to quantify as turn
+                % minima = 5; % Local Minima     
+                % impulseDuration = 0.2; % Larger value means more smoothed
+                % turnInfo2.(id) = absShahTurn(filterData,gyro2,minima,amplitudeThreshold,velocityThreshold,impulseDuration);
+                % saveData.turnDataCali.(daynum{j}).(sensor{s}) = turnInfo2.(id);
+                % 
+                % catch
+                %     disp(append('Error within Calibration, Sensor: ',sensor{s},' ',daynum{j}))
+                % end
+            end            
+        
+           
+            %% Head Turn Metrics During Walking bouts
+            
+            sensor = fieldnames(stepData.(daynum{j}));
+            if isfield(stepData.(daynum{j}), 'waist') && isfield(stepData.(daynum{j}), 'head')
+                gyro2 = rotate.(id).(daynum{j}).head.gyro(:,3);
+                impulseDuration = 1.476;
+                filterData = ShahFilter(gyro2,impulseDuration,100); 
+                walkWindow = stepData.(daynum{j}).waist.walkBouts;
+                % turns during walk window
+                for ff = 1:length(walkWindow)-1
+                    if walkWindow(ff,2) > length(filterData)
+                        continue
+                    else
+                        if all(structfun(@isempty,absShahTurn(filterData(walkWindow(ff,1):walkWindow(ff,2)),gyro2(walkWindow(ff,1):walkWindow(ff,2)),minima,amplitudeThreshold,velocityThreshold,impulseDuration)))
+                            continue
+                        else
+                            walkBout = sprintf('w%d', ff);
+                            turnWalk.(id).(walkBout) = absShahTurn(filterData(walkWindow(ff,1):walkWindow(ff,2)),gyro2(walkWindow(ff,1):walkWindow(ff,2)),minima,amplitudeThreshold,velocityThreshold,impulseDuration);   
+                        end
+                    end
+                end                
+                saveData.turnWalk.(daynum{j}).(sensor{ss}) = turnWalk.(id);
+            end
+
+            catch
+                disp(append("Day did not work ",daynum{j}))
+            end
+        end             
+        %% Save 
+        % try
+        %     % CSTAR
+        %     subIDFold = strcat(currentFoldPath,'\Data\Walking\', id,filesep);
+        % 
+        %     if ~isfolder(subIDFold)
+        %         mkdir(subIDFold)
+        %     end
+        %     savePath = strcat(subIDFold,'data.mat');
+        %     save(savePath, '-struct','saveData');
+        %     disp(append('Save ', id))
+        % catch
+        %     disp('didnt save')
+        % end
+
+    catch
+        disp(append('Error with Subject: ', id))
+    end
+end
+

@@ -33,48 +33,74 @@ function [stepInfo, calibrate] = mcCamleyStepDetection(vertAcceleration)
     % Peak selection
     [~,peaks] = findpeaks(-accVICWT, 'MinPeakHeight',mph,'MinPeakDistance',mpd,MinPeakProminence=0.05);
 
-    % Initialize step count variables
+    % figure
+    % hold on
+    % plot(-accVICWT)
+    % plot(peaks,-accVICWT(peaks),'*')
+
+    %% Initialize step count variables
     stepCount = 0;
     stepPerBout = [];
     StepCountLocPer = [];
-    maxStepDuration = 2; % 30 steps/min, Duration(s) = 60/Cadence
+    maxStepDuration = 2; % 30 steps/min
     minStepDuration = 0.33; % 180 steps/min
     begin = [];
+    strideTimePerBout = [];
+    strideTimeAll = [];
+    walkBouts = [0 0];
 
     try
     % Loop thru all potential steps
-    for p = 1:length(peaks)-1 %511902:11960
+    for p = 1:length(peaks)-1 
         % Duration between successive peaks
-            % Duration btw peaks (sec)
-            delta_t = (peaks(p+1) - peaks(p))/100; 
-            if delta_t < maxStepDuration && delta_t > minStepDuration
-                 if LocFlag == 0 % Initialize Locomotion period
-                    LocPer = LocPer + 1;
-                    LocFlag = 1;
-                    StepCountLocPer = StepCountLocPer + 1;
-                    start = peaks(p+1);
-                 else
-                    % Continue counting steps
-                    StepCountLocPer = StepCountLocPer + 1;                  
-                 end
-            else
-                % End of Locomotion period
-                if StepCountLocPer > 10
-                    begin = [begin;start, peaks(p)];
-                    LocFlag = 0;
-                    % Reset step counter
-                    stepPerBout = [stepPerBout;StepCountLocPer];
-                    stepCount = stepCount+StepCountLocPer;
-                    StepCountLocPer = 0;                    
-                else                      
-                    StepCountLocPer = 0;
-                    LocFlag = 0;
-                end                
-            end     
-    end   
+        % Duration btw peaks (sec)
+        delta_t = (peaks(p+1) - peaks(p))/100; 
+        if delta_t < maxStepDuration && delta_t > minStepDuration
+             if LocFlag == 0 % Initialize Locomotion period
+                LocPer = LocPer + 1;
+                LocFlag = 1;
+                StepCountLocPer = StepCountLocPer + 1;
+                start = peaks(p+1);
+                marker = peaks(p);
+                strideTime(1,1) = delta_t;
+             else
+                % Continue counting steps
+                StepCountLocPer = StepCountLocPer + 1;
+                strideTime(end+1,1) = delta_t; % Store the duration of the current stride
+             end
+        else
+            % End of Locomotion period
+            if StepCountLocPer > 10
+                begin = [begin;start, peaks(p)];
+                LocFlag = 0;
+                % Reset step counter
+                stepPerBout = [stepPerBout;StepCountLocPer];
+                stepCount = stepCount+StepCountLocPer;
+                StepCountLocPer = 0;    
+                strideTimeAll = [strideTimeAll; strideTime(4:end-4)];
+                strideTimePerBout = [strideTimePerBout; mean(strideTime(4:end-4))];
+                strideTime = [];
+                walkBouts(end+1,:) = [marker peaks(p)];
+            else                      
+                StepCountLocPer = 0;
+                LocFlag = 0;
+            end                
+        end     
+    end  
+    %%
+    stepInfo.strideTimePerBout = strideTimePerBout;
+    stepInfo.strideTimeAll = strideTimeAll;
     stepInfo.stepCount = stepCount;
     stepInfo.meanStepBout = round(mean(stepPerBout));
     stepInfo.stepPerBout = stepPerBout;
+    stepInfo.walkBouts = walkBouts(2:end,:);
+
+    % figure
+    % plot(accVICWT)
+    % hold on
+    % plot(walkBouts(2:end,1),accVICWT(walkBouts(2:end,1)),'*')
+    % plot(walkBouts(2:end,2),accVICWT(walkBouts(2:end,2)),'*')
+
 
     %%
     largerBouts = 20;%mean(stepPerBout);

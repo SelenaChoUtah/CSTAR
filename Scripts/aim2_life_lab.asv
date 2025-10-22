@@ -1,0 +1,768 @@
+%% Loading life data
+cd('C:\Users\chose\Box\DHI-Lab\')
+addpath(genpath('CSTAR\'))
+cd('D:\CSTAR')
+addpath(genpath('CSTAR\'))
+addpath(genpath('Data\'))
+addpath(genpath('DHI_data\'))
+
+% Load in the excel data
+subInfo = readtable("CSTAR\subject_info.xlsx",'sheet','All');
+
+% Load Life Data
+
+currentFoldPath = cd;
+processPath = dir(fullfile(currentFoldPath,'\Data\Process'));
+processPath = processPath(~ismember({processPath.name}, {'.', '..'}));
+aa = listdlg('PromptString',{'Select Subjects to Pull (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{processPath.name});
+subjectnum = processPath(aa);
+
+% % walking bout data
+% walkprocessPath = dir(fullfile(currentFoldPath,'\Data\Walking'));
+% walkprocessPath = walkprocessPath(~ismember({walkprocessPath.name}, {'.', '..'}));
+% wsubjectnum = walkprocessPath(aa);
+
+% Load Life Data 
+for ii = 1:numel(subjectnum)
+    % Save Data into Process
+    id = string(subjectnum(ii).name);
+    % disp(id)   
+    data.(id) = load(fullfile(subjectnum(ii).folder,subjectnum(ii).name,'data.mat'));  
+    % newData = load(fullfile(wsubjectnum(ii).folder,wsubjectnum(ii).name,'data.mat'));
+    % data.(id).turnWalk = newData.turnWalk;
+end
+
+% Remove duplicate data
+subID = fieldnames(data);
+rowsToKeep = ismember(subID, subInfo.DHI_ID);
+
+% Remove rows where data.name does not exist in subInfo.ID
+subID = subID(rowsToKeep);
+subInfo(subInfo.ID == "DHI010", :) = []; %<-only 1 full day
+
+for i = 1:length(subID)
+    dataClean.(subID{i}) = data.(subID{i});
+end
+
+% Generating a lot of daily life stats and saving to subInfo
+
+samplingRate = 100;
+samplesPerHour = 3600 * samplingRate;
+variables = ["amplitude", "angVelocity"];
+
+subID = fieldnames(dataClean);
+
+
+    varName = variables(v);
+    
+    for ii = 1:length(subID)
+        dayNum = fieldnames(dataClean.(subID{ii}).turnData);
+        
+        for dd = 1:length(dayNum)
+            sensors = {'waist','head'};
+            % sensors = fieldnames(dataClean.(subID{ii}).turnData.(dayNum{dd}));
+            
+            for ss = 1%:length(sensors)
+                thisSensor = sensors{ss};
+
+                if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}), thisSensor)
+                    continue
+                end
+
+                % wear time check
+                if isfield(dataClean.(subID{ii}), 'timeData') && ...
+                   isfield(dataClean.(subID{ii}).timeData.(dayNum{dd}), thisSensor) && ...
+                   dataClean.(subID{ii}).timeData.(dayNum{dd}).(thisSensor).wearTime < 10
+                    continue
+                end                
+
+                if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor), varName)
+                    continue
+                end
+
+                dataVec = dataClean.(subID{ii}).stepData.(dayNum{dd}).(thisSensor).(varName);
+                
+
+                % % Store daily summary stats
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyMean(dd, :) = hourlyMean;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyMedian(dd, :) = hourlyMedian;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyP95(dd, :) = hourlyP95;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyTurnCount(dd, :) = hourlyCount;
+
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMean(dd) = mean(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMedian(dd) = median(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyP95(dd) = prctile(dataVec, 95);
+                allStats.(subID{ii}).(thisSensor).(varName).dailyTurnCount(dd) = length(dataVec);
+                allStats.(subID{ii}).(thisSensor).(varName).dailyCV(dd) = std(dataVec, 'omitnan')/mean(dataVec, 'omitnan');
+
+                validHour = ~isnan(hourlyMean);
+                if any(validHour)
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = ...
+                        std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                else
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = NaN;
+                end
+
+                % Small vs Large Turns
+                isSmall = dataVec < 45;
+                isLarge = dataVec >= 45;
+                
+                % Initialize containers
+                turnTypes = {'Small', 'Large'};
+                turnMasks = {isSmall, isLarge};
+                
+                for tt = 1:2
+                    turnLabel = turnTypes{tt};
+                    mask = turnMasks{tt};
+                    dataSubset = dataVec(mask);
+                    timeSubset = timeIdx(mask);
+                
+                    hourlyMean = nan(1, 24);
+                    hourlyMedian = nan(1, 24);
+                    hourlyP95 = nan(1, 24);
+                    hourlyCount = nan(1, 24);
+                
+                    for hr = 0:23
+                        hrStart = hr * samplesPerHour;
+                        hrEnd = (hr + 1) * samplesPerHour;
+                        inHour = timeSubset >= hrStart & timeSubset < hrEnd;
+                
+                        if any(inHour)
+                            hourlyData = dataSubset(inHour);
+                            hourlyMean(hr + 1) = mean(hourlyData);
+                            hourlyMedian(hr + 1) = median(hourlyData);
+                            hourlyP95(hr + 1) = prctile(hourlyData, 95);
+                            hourlyCount(hr + 1) = sum(inHour);
+                        end
+                    end
+                
+                    % % Store stats for Small/Large turns
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMean'])(dd, :) = hourlyMean;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMedian'])(dd, :) = hourlyMedian;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyP95'])(dd, :) = hourlyP95;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyCount'])(dd, :) = hourlyCount;
+                
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMean'])(dd) = mean(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMedian'])(dd) = median(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyP95'])(dd) = prctile(dataSubset, 95);
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyCV'])(dd) = std(dataSubset, 'omitnan')/mean(dataSubset, 'omitnan');
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyStd'])(dd) = std(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'TurnCount'])(dd) = length(dataSubset);
+                    
+                
+                    validHour = ~isnan(hourlyMean);
+                    if any(validHour)
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = ...
+                            std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                    else
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = NaN;
+                    end
+                end
+            end
+        end
+    end
+
+
+subID = fieldnames(allStats);
+for ii = 1:length(subID)
+    sensors = fieldnames(allStats.(subID{ii}));
+    for ss = 1:length(sensors)
+        thisSensor = sensors{ss};   
+        varName = fieldnames(allStats.(subID{ii}).(thisSensor));
+        for vv = 1:length(varName)
+            statsVar = fieldnames(allStats.(subID{ii}).(thisSensor).(varName{vv}));
+            for sv = 1:length(statsVar)
+                theStat = nonzeros(allStats.(subID{ii}).(thisSensor).(varName{vv}).(statsVar{sv})(:));
+
+                % save info to subINFO
+                rowNumber = find(strcmp(subInfo.DHI_ID, subID{ii}));
+                colName = append(thisSensor,'_',varName{vv},statsVar{sv});
+                subInfo.(colName)(rowNumber) = mean(theStat,'omitnan'); 
+                if contains(statsVar{sv},'TurnCount')
+                    % Turn count CV
+                    rowNumber = find(strcmp(subInfo.DHI_ID, subID{ii}));
+                    colName = append(thisSensor,'_',varName{vv},statsVar{sv},'CV');
+                    subInfo.(colName)(rowNumber) = std(theStat,'omitnan')/mean(theStat,'omitnan');
+                    % Turn count Median
+                    rowNumber = find(strcmp(subInfo.DHI_ID, subID{ii}));
+                    colName = append(thisSensor,'_',varName{vv},statsVar{sv},'Median');
+                    subInfo.(colName)(rowNumber) = median(theStat,'omitnan');
+                    % Turn count P95
+                    rowNumber = find(strcmp(subInfo.DHI_ID, subID{ii}));
+                    colName = append(thisSensor,'_',varName{vv},statsVar{sv},'P95');
+                    subInfo.(colName)(rowNumber) = prctile(theStat,95);
+                end
+            end
+        end
+    end
+end
+
+%% Step Count
+
+
+subID = fieldnames(dataClean);
+
+for v = 1:length(variables)
+    varName = variables(v);
+    
+    for ii = 1:length(subID)
+        dayNum = fieldnames(dataClean.(subID{ii}).turnData);
+        
+        for dd = 1:length(dayNum)
+            sensors = {'head','neck'};
+            % sensors = fieldnames(dataClean.(subID{ii}).turnData.(dayNum{dd}));
+            
+            for ss = 1%:length(sensors)
+                thisSensor = sensors{ss};
+
+                if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}), thisSensor)
+                    continue
+                end
+
+                % wear time check
+                if isfield(dataClean.(subID{ii}), 'timeData') && ...
+                   isfield(dataClean.(subID{ii}).timeData.(dayNum{dd}), thisSensor) && ...
+                   dataClean.(subID{ii}).timeData.(dayNum{dd}).(thisSensor).wearTime < 10
+                    continue
+                end                
+
+                if ~isfield(dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor), varName)
+                    continue
+                end
+
+                dataVec = dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor).(varName);
+                startstop = dataClean.(subID{ii}).turnData.(dayNum{dd}).(thisSensor).startstop;
+                timeIdx = startstop(:,1);
+
+                % Initialize hourly stats
+                hourlyMean = nan(1, 24);
+                hourlyMedian = nan(1, 24);
+                hourlyP95 = nan(1, 24);
+                hourlyCount = nan(1, 24);
+
+                for hr = 0:23
+                    hrStart = hr * samplesPerHour;
+                    hrEnd = (hr + 1) * samplesPerHour;
+                    inHour = timeIdx >= hrStart & timeIdx < hrEnd;
+                    if any(inHour)
+                        hourlyData = dataVec(inHour);
+                        hourlyMean(hr + 1) = mean(hourlyData);
+                        hourlyMedian(hr + 1) = median(hourlyData);
+                        hourlyP95(hr + 1) = prctile(hourlyData, 95);
+                        hourlyCount(hr + 1) = sum(inHour);
+                    end
+                end
+
+                % % Store daily summary stats
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyMean(dd, :) = hourlyMean;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyMedian(dd, :) = hourlyMedian;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyP95(dd, :) = hourlyP95;
+                % allStats.(subID{ii}).(thisSensor).(varName).hourlyTurnCount(dd, :) = hourlyCount;
+
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMean(dd) = mean(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyMedian(dd) = median(dataVec, 'omitnan');
+                allStats.(subID{ii}).(thisSensor).(varName).dailyP95(dd) = prctile(dataVec, 95);
+                allStats.(subID{ii}).(thisSensor).(varName).dailyTurnCount(dd) = length(dataVec);
+                allStats.(subID{ii}).(thisSensor).(varName).dailyCV(dd) = std(dataVec, 'omitnan')/mean(dataVec, 'omitnan');
+
+                validHour = ~isnan(hourlyMean);
+                if any(validHour)
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = ...
+                        std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                else
+                    allStats.(subID{ii}).(thisSensor).(varName).intraDayCV(dd) = NaN;
+                end
+
+                % Small vs Large Turns
+                isSmall = dataVec < 45;
+                isLarge = dataVec >= 45;
+                
+                % Initialize containers
+                turnTypes = {'Small', 'Large'};
+                turnMasks = {isSmall, isLarge};
+                
+                for tt = 1:2
+                    turnLabel = turnTypes{tt};
+                    mask = turnMasks{tt};
+                    dataSubset = dataVec(mask);
+                    timeSubset = timeIdx(mask);
+                
+                    hourlyMean = nan(1, 24);
+                    hourlyMedian = nan(1, 24);
+                    hourlyP95 = nan(1, 24);
+                    hourlyCount = nan(1, 24);
+                
+                    for hr = 0:23
+                        hrStart = hr * samplesPerHour;
+                        hrEnd = (hr + 1) * samplesPerHour;
+                        inHour = timeSubset >= hrStart & timeSubset < hrEnd;
+                
+                        if any(inHour)
+                            hourlyData = dataSubset(inHour);
+                            hourlyMean(hr + 1) = mean(hourlyData);
+                            hourlyMedian(hr + 1) = median(hourlyData);
+                            hourlyP95(hr + 1) = prctile(hourlyData, 95);
+                            hourlyCount(hr + 1) = sum(inHour);
+                        end
+                    end
+                
+                    % % Store stats for Small/Large turns
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMean'])(dd, :) = hourlyMean;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyMedian'])(dd, :) = hourlyMedian;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyP95'])(dd, :) = hourlyP95;
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'HourlyCount'])(dd, :) = hourlyCount;
+                
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMean'])(dd) = mean(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyMedian'])(dd) = median(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyP95'])(dd) = prctile(dataSubset, 95);
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyCV'])(dd) = std(dataSubset, 'omitnan')/mean(dataSubset, 'omitnan');
+                    % allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'DailyStd'])(dd) = std(dataSubset, 'omitnan');
+                    allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'TurnCount'])(dd) = length(dataSubset);
+                    
+                
+                    validHour = ~isnan(hourlyMean);
+                    if any(validHour)
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = ...
+                            std(hourlyMean(validHour)) / mean(hourlyMean(validHour));
+                    else
+                        allStats.(subID{ii}).(thisSensor).(varName).([turnLabel 'IntraDayCV'])(dd) = NaN;
+                    end
+                end
+            end
+        end
+    end
+end
+
+%%
+
+% Loading Lab Data
+dataPath = dir(fullfile(currentFoldPath,'\DHI_data\PreprocessData\Lab\Axivity\'));
+
+% Keep only subject folders
+axivityFolder = dataPath(~ismember({dataPath.name}, {'.', '..','subject_info.xlsx'}));
+
+% Which Subject to preprocess
+subjectnum = axivityFolder(listdlg('PromptString',{'Select subjects to load (can select multiple)',''},...
+        'SelectionMode','multiple','ListString',{axivityFolder.name}));
+
+% Load in data
+for ss = 1:length(subjectnum)
+    labData.(subjectnum(ss).name) = load(fullfile(subjectnum(ss).folder,subjectnum(ss).name,filesep,'data.mat'));
+end 
+
+subID = fieldnames(labData);
+for ss = 1:length(subID)
+    horiHead.(subID{ss}) = labData.(subID{ss}).gaitHori.head.gyro;
+end
+
+% Use Shah turn to detect head turns
+% Turning Algo
+subID = fieldnames(horiHead);
+for ss = 1:length(subID) 
+    % if ss == 6
+    %     turnInfo.(subID{ss}).amplitude = 0;
+    %     turnInfo.(subID{ss}).angVelocity = 0;
+    % else
+        gyro = horiHead.(subID{ss})(:,3);
+        impulseDuration = 1.476;
+        filterData = ShahFilter(gyro,impulseDuration,100); 
+    
+        amplitudeThreshold = 10; % deg minimum amplitude for head turn
+        velocityThreshold = 15; % deg/s peak velocity to quantify as turn
+        minima = 5; % Local Minima     
+        impulseDuration = 0.2; % Larger value means more smoothed
+        turnInfo.(subID{ss}) = absShahTurn(filterData,gyro,minima,amplitudeThreshold,velocityThreshold,impulseDuration);
+    
+    % end
+end
+
+subID = fieldnames(turnInfo);
+for ii = 1:length(subID)
+    stats = fieldnames(turnInfo.(subID{ii}));
+    for ss = 1:2
+        theStat = turnInfo.(subID{ii}).(stats{ss});
+        % save info to subINFO
+        rowNumber = find(strcmp(subInfo.DHI_ID, subID{ii}));
+        colName = stats{ss};
+        subInfo.(colName)(rowNumber) = mean(theStat,'omitnan'); 
+    end
+end
+
+%% Scatterplot
+
+varName = subInfo.Properties.VariableNames;
+
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select X variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% Ask user to select Y variable
+[yIdx, okY] = listdlg('PromptString','Select Y variable:', ...
+                      'SelectionMode','single', ...
+                      'ListString', varName);
+
+% plot
+xVar = varName{xIdx};
+yVar = varName{yIdx};
+
+xData = subInfo.(xVar);
+yData = subInfo.(yVar);
+
+% Plot
+figure
+hold on
+scatter(xData(subInfo.ConcussLabel==0), yData(subInfo.ConcussLabel==0), 'filled');
+scatter(xData(subInfo.ConcussLabel==1), yData(subInfo.ConcussLabel==1), 'filled');
+
+offset = 0.01 * range(xData);
+for i = 1:height(subInfo)
+    text(xData(i) + offset, yData(i), subInfo.DHI_ID(i), 'FontSize', 8);
+end
+
+xlabel(strrep(xVar, '_', '\_'));
+ylabel(strrep(yVar, '_', '\_'));
+legend("HC","mTBI")
+title(sprintf('Scatter plot of %s vs %s', yVar, xVar), 'Interpreter', 'none');
+saveas(gcf,append(xVar,'_',yVar),'svg')
+
+%% T-Test and Violin
+
+varName = subInfo.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% Plot violin
+figure
+for xx = 1:length(xIdx)    
+    xVar = varName{xIdx(xx)};
+    xData = subInfo.(xVar);
+
+    [h,p,ci,stats] = ttest2(xData(subInfo.ConcussLabel==0),xData(subInfo.ConcussLabel==1));
+    if p < 0.05
+        nexttile
+        fprintf("Stats for variable: %s\n",xVar)
+        fprintf("\t H: %d p: %d\n",h,p)
+    
+        Violin2(xData(subInfo.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+        Violin2(xData(subInfo.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+        title(sprintf('%s p=%1.4f, Cohen D=%1.2f', xVar,p,resultsTable3.EffectSize(xIdx(xx)-22)), 'Interpreter', 'none');
+        % ylim([2000 9000])
+        saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+    end
+end
+
+%% Calculate Mean Effect Size
+
+allVars = {};
+allES   = [];
+allCI = [];
+
+varNames = subInfo.Properties.VariableNames;
+for vv = 23:length(varNames)
+    xData = subInfo.(varNames{vv});
+    mtbi_data = xData(subInfo.ConcussLabel == 1);
+    hc_data   = xData(subInfo.ConcussLabel == 0);
+    
+    % calc effect size
+    ES = meanEffectSize(hc_data,mtbi_data,"Effect","robustcohen");    
+    
+    % store results
+    allVars{end+1,1} = varNames{vv};  
+    allES(end+1,1)   = ES.Effect;
+    allCI(end+1,1:2)   = ES.ConfidenceIntervals;
+end
+
+resultsTable3 = table(allVars, allES, allCI, ...
+    'VariableNames', {'Variable','EffectSize', 'CI'});
+
+%% Results Section
+
+
+% Pick to plot table
+varName = subInfo.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, ~] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% Step count – activity rate. 
+% miniBEST Score
+% Symptom Score
+% plot
+% for xx = 1:length(xIdx)
+%     xVar = varName{xIdx(xx)};
+%     xData = subInfo.(xVar);
+% 
+%     fprintf("Mean %s Healthy  mTBI \n %1.2f (%1.2f)  %1.2f (%1.2f)\n", ...
+%         string(varName{xIdx(xx)}),mean(nonzeros(xData(subInfo.ConcussLabel==0))),std(nonzeros(xData(subInfo.ConcussLabel==0))),...
+%         mean(nonzeros(xData(subInfo.ConcussLabel==1))),std(nonzeros(xData(subInfo.ConcussLabel==1))))    
+% end
+
+allVars = {};
+hcMean = strings(0, 1);
+mTBIMean = strings(0, 1);
+
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = subInfo.(xVar);
+    mtbi_data = xData(subInfo.ConcussLabel == 1);
+    hc_data   = xData(subInfo.ConcussLabel == 0);    
+        
+    % store results
+    allVars{end+1,1} = string(varName{xIdx(xx)});  
+    hcMean(end+1,1)   = sprintf("%1.2f (%1.2f)",mean(nonzeros(xData(subInfo.ConcussLabel==0))),std(nonzeros(xData(subInfo.ConcussLabel==0))));
+    mTBIMean(end+1,1)   = sprintf("%1.2f (%1.2f)",mean(nonzeros(xData(subInfo.ConcussLabel==1))),std(nonzeros(xData(subInfo.ConcussLabel==1))));
+end
+
+copyTable = table(allVars, hcMean, mTBIMean, ...
+    'VariableNames', {'Variable','Healthy', 'mTBI'});
+%% Z-score and then PCA
+
+% Step 1: remove ID/categorical variables
+% T = subInfo;
+% removeVars = {'ID','DHI_ID','Sex','Concuss','ConcussLabel','Type','HasHealthyMatch_','LastDay'};
+% T(:, removeVars) = [];
+
+% T = subInfo(1:21,:);
+% removeVars = {'ID','DHI_ID','Sex','Concuss','ConcussLabel','Type','HasHealthyMatch_','LastDay','tug_st_time','tug_dt_time','DaysSince'};
+% T(:, removeVars) = [];
+T = subInfo(:,[3,23:80]);
+
+% Step 2: select numeric features you want
+% varsForPCA = {'NSI_Score','Anxiety','Cognitive','Migraine','Ocular','Vestibular','CP_score','VOMs','MiniBEST','DHI',...
+%               'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV'};
+ 
+varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudeintraDayCV',...
+              'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+              'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95', ...
+              'head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV'};
+ 
+% varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudedailyTurnCount','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+%               'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95','head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV',...
+%               'head_angVelocityLargeDailyMean','head_angVelocityLargeDailyP95','head_angVelocityLargeIntraDayCV'};
+
+% varsForPCA = {'head_amplitudedailyMean','head_amplitudedailyP95','head_amplitudedailyTurnCount','head_amplitudeintraDayCV',...
+%               'head_angVelocitydailyMean','head_angVelocitydailyP95','head_angVelocityintraDayCV',...
+%               'head_angVelocitySmallDailyMean','head_angVelocitySmallDailyP95','head_angVelocitySmallTurnCount','head_angVelocitySmallIntraDayCV'};
+
+X = T{:, varsForPCA};  % convert to numeric matrix
+
+% Step 3: standardize (z-score)
+Xz = zscore(X);
+
+% Step 4: run PCA
+[coeff, score, latent, tsq, explained] = pca(Xz);
+ 
+% figure
+% plot(cumsum(explained), '-o');
+% xlabel('PCs'); ylabel('Cumulative Variance Explained (%)');
+% title('PCA on Selected Features');
+
+
+% Plotting nPCs
+nPCs = 3;
+
+figure;
+for pc = 1:nPCs
+    subplot(1,nPCs,pc)
+    
+    % Sort variables by loading weight (absolute value)
+    [~, idx] = sort(coeff(:,pc), 'descend');
+    
+    % % Example: use effect size to scale marker size
+    % effectSize = abs(coeff(idx,pc)); 
+    % markerSizes = 50 + 200 * effectSize / max(effectSize);
+    
+    % Plot loadings with marker size representing effect size
+    scatter(coeff(idx,pc), 1:length(idx), 'c','filled'); hold on;
+    
+    % Style
+    set(gca,'YTick',1:length(idx), 'YTickLabel', varsForPCA(idx)); % varNames on y-axis
+    set(gca,'YDir','reverse'); % so top = first in list
+    xline(0,'k-');             % reference line
+    xline(0.2,'k--'); 
+    xline(-0.2,'k--'); 
+    title(['PC ' num2str(pc) ' (' num2str(round(explained(pc),1)) '%)']);
+    xlabel('Loading weight');
+    ylabel('Variables');
+end
+
+% Plot score and into a violin plot 
+
+% Line score and label to plot 
+figure
+for vv = 1%length(varsForPCA)
+    nexttile
+    Violin2(score(dhi_table.ConcussLabel==0,vv),1,'Showdata',true,'Sides','Left','ShowMean',true);
+    Violin2(score(dhi_table.ConcussLabel==1,vv),1,'Showdata',true,'Sides','Right','ShowMean',true);
+    title(sprintf('PCA %1.0f', vv), 'Interpreter', 'none');
+    
+end
+
+
+vv=1;
+[h,p,ci,stats] = ttest2(score(dhi_table.ConcussLabel==0,vv),score(dhi_table.ConcussLabel==1,vv));
+fprintf("\t H: %d p: %d\n",h,p)
+
+% for subInfo
+
+figure
+for vv = 1%length(varsForPCA)
+    nexttile
+    Violin2(score(dhi_table.ConcussLabel==0,vv),1,'Showdata',true,'Sides','Left','ShowMean',true);
+    Violin2(score(dhi_table.ConcussLabel==1,vv),1,'Showdata',true,'Sides','Right','ShowMean',true);
+    title(sprintf('PCA %1.0f', vv), 'Interpreter', 'none');    
+end
+
+vv=1;
+[h,p,ci,stats] = ttest2(score(subInfo.ConcussLabel==0,vv),score(subInfo.ConcussLabel==1,vv));
+fprintf("\t H: %d p: %d\n",h,p)
+
+%% Just DHI Participants - Violin
+
+dhi_table = subInfo(1:22,:);
+
+varName = dhi_table.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% Plot violin
+figure
+for xx = 1:length(xIdx)    
+    xVar = varName{xIdx(xx)};
+    xData = subInfo.(xVar);
+
+    [h,p,ci,stats] = ttest2(xData(dhi_table.ConcussLabel==0),xData(dhi_table.ConcussLabel==1));
+    if p < 0.05
+        nexttile
+        fprintf("Stats for variable: %s\n",xVar)
+        fprintf("\t H: %d p: %d\n",h,p)
+    
+        Violin2(xData(dhi_table.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+        Violin2(xData(dhi_table.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+        title(sprintf('%s p=%1.4f, Cohen D=%1.2f', xVar,p,resultsTable3.EffectSize(xIdx(xx)-22)), 'Interpreter', 'none');
+        % ylim([2000 9000])
+        % saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+    end
+end
+
+
+% % plot
+% for xx = 1:length(xIdx)
+%     xVar = varName{xIdx(xx)};
+%     xData = dhi_table.(xVar);
+% 
+%     [h,p,ci,stats] = ttest2(xData(dhi_table.ConcussLabel==0),xData(dhi_table.ConcussLabel==1));
+%     fprintf("Stats for variable: %s\n",xVar)
+%     fprintf("\t H: %d p: %d\n",h,p)
+% end
+% 
+% % Plot violin
+% figure
+% for xx = 1:length(xIdx)
+%     % hold on
+%     nexttile
+%     xVar = varName{xIdx(xx)};
+%     xData = dhi_table.(xVar);
+%     Violin2(xData(dhi_table.ConcussLabel==0),1,'Showdata',true,'Sides','Left','ShowMean',true);
+%     Violin2(xData(dhi_table.ConcussLabel==1),1,'Showdata',true,'Sides','Right','ShowMean',true);
+%     title(sprintf('%s', xVar), 'Interpreter', 'none');
+%     % ylim([100 400])
+%     % saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
+% 
+% end
+
+
+%% Results Section
+
+dhi_table = subInfo(1:22,:);
+% Pick to plot table
+varName = dhi_table.Properties.VariableNames;
+% Ask user to select X variable
+[xIdx, ~] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
+                      'SelectionMode','multiple', ...
+                      'ListString', varName);
+
+% Step count – activity rate. 
+% miniBEST Score
+% Symptom Score
+% plot
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+
+    fprintf("Mean %s Healthy  mTBI \n %1.2f (%1.2f)  %1.2f (%1.2f)\n", ...
+        string(varName{xIdx(xx)}),mean(nonzeros(xData(dhi_table.ConcussLabel==0))),std(nonzeros(xData(dhi_table.ConcussLabel==0))),...
+        mean(nonzeros(xData(dhi_table.ConcussLabel==1))),std(nonzeros(xData(dhi_table.ConcussLabel==1))))
+    
+end
+
+%% CV
+for xx = 1:length(xIdx)
+    xVar = varName{xIdx(xx)};
+    xData = dhi_table.(xVar);
+
+    fprintf("CV %s Healthy  mTBI \n %1.2f (%1.2f)  %1.2f (%1.2f)\n", ...
+        string(varName{xIdx(xx)}),...
+        std(nonzeros(xData(dhi_table.ConcussLabel==0)))/mean(nonzeros(xData(dhi_table.ConcussLabel==0))),std(std(nonzeros(xData(dhi_table.ConcussLabel==0)))/mean(nonzeros(xData(dhi_table.ConcussLabel==0)))),...
+        std(nonzeros(xData(dhi_table.ConcussLabel==1)))/mean(nonzeros(xData(dhi_table.ConcussLabel==1))),std(std(nonzeros(xData(dhi_table.ConcussLabel==1)))/mean(nonzeros(xData(dhi_table.ConcussLabel==1)))))
+    
+end
+
+%% Sex
+
+% HC
+hh = length(find(count(dhi_table.Sex(find(dhi_table.ConcussLabel==0)),'F')));
+fprintf("Healthy number: %1.0f (%1.0f F)\n",length(find(dhi_table.ConcussLabel==0)),hh)
+% mTBI
+mm = length(find(count(dhi_table.Sex(find(dhi_table.ConcussLabel==1)),'F')));
+fprintf("mTBI number: %1.0f (%1.0f F)\n",length(find(dhi_table.ConcussLabel==1)),mm)
+
+%% Calculate Mean Effect Size
+
+allVars = {};
+allES   = [];
+allCI = [];
+
+varNames = dhi_table.Properties.VariableNames;
+for vv = 23:length(varNames)
+    xData = dhi_table.(varNames{vv});
+    mtbi_data = xData(dhi_table.ConcussLabel == 1);
+    hc_data   = xData(dhi_table.ConcussLabel == 0);
+    
+    % calc effect size
+    ES = meanEffectSize(hc_data,mtbi_data,"Effect","robustcohen");    
+    
+    % store results
+    allVars{end+1,1} = varNames{vv};  
+    allES(end+1,1)   = ES.Effect;
+    allCI(end+1,1:2)   = ES.ConfidenceIntervals;
+end
+
+resultsTable2 = table(allVars, allES, allCI, ...
+    'VariableNames', {'Variable','EffectSize', 'CI'});
+
+
+%% Correlation between in-lab and life
+
+
+[r, p] = corr(dhi_table.head_amplitudedailyMean, dhi_table.amplitude);
+fprintf('Amplitude Daily Mean: r = %.2f, p = %.4f\n', r, p);
+
+[r, p] = corr(dhi_table.head_amplitudedailyP95, dhi_table.amplitude);
+fprintf('Amplitude P95: r = %.2f, p = %.4f\n', r, p);
+
+
+[r, p] = corr(dhi_table.head_angVelocitydailyMean, dhi_table.angVelocity);
+fprintf('AngVelocity Daily Mean: r = %.2f, p = %.4f\n', r, p);
+
+[r, p] = corr(dhi_table.head_angVelocitydailyP95, dhi_table.angVelocity);
+fprintf('AngVelocity P95: r = %.2f, p = %.4f\n', r, p);
