@@ -216,7 +216,7 @@ for ii = 1:length(subID)
     end
 end
 
-%% Step Count
+% Step Count
 
 subID = fieldnames(dataClean);
 varName = 'stepCount';
@@ -259,7 +259,7 @@ for ii = 1:length(subID)
             allStats.(subID{ii}).(thisSensor).(varName).dailyMedian(dd) = median(dataVec, 'omitnan');
             allStats.(subID{ii}).(thisSensor).(varName).dailyP95(dd) = prctile(dataVec, 95);
             allStats.(subID{ii}).(thisSensor).(varName).dailyTurnCount(dd) = length(dataVec);
-            allStats.(subID{ii}).(thisSensor).(varName).dailyCV(dd) = std(dataVec, 'omitnan')/mean(dataVec, 'omitnan');
+            % allStats.(subID{ii}).(thisSensor).(varName).dailyCV(dd) = std(dataVec, 'omitnan')/mean(dataVec, 'omitnan');
 
             validHour = ~isnan(hourlyMean);
             if any(validHour)
@@ -271,7 +271,6 @@ for ii = 1:length(subID)
         end
     end
 end
-%%
 
 
 subID = fieldnames(allStats);
@@ -417,8 +416,8 @@ for xx = 1:length(xIdx)
     xData = subInfo.(xVar);
 
     [h,p,ci,stats] = ttest2(xData(subInfo.ConcussLabel==0),xData(subInfo.ConcussLabel==1));
-    % if p < 0.05
-    %     nexttile
+    if p < 0.05 && ~contains(xVar,'Intra') && ~contains(xVar,'intra')
+        nexttile
         fprintf("Stats for variable: %s\n",xVar)
         fprintf("\t H: %d p: %d\n",h,p)
     
@@ -427,7 +426,7 @@ for xx = 1:length(xIdx)
         title(sprintf('%s p=%1.4f, Cohen D=%1.2f', xVar,p,resultsTable3.EffectSize(xIdx(xx)-22)), 'Interpreter', 'none');
         % ylim([2000 9000])
         saveas(gcf,sprintf('Violin Plot %s', xVar),'svg')
-    % end
+    end
 end
 
 %% Calculate Mean Effect Size
@@ -603,6 +602,28 @@ fprintf("\t H: %d p: %d\n",h,p)
 
 dhi_table = subInfo(1:22,:);
 
+allVars = {};
+allES   = [];
+allCI = [];
+
+varNames = dhi_table.Properties.VariableNames;
+for vv = 23:length(varNames)
+    xData = dhi_table.(varNames{vv});
+    mtbi_data = xData(dhi_table.ConcussLabel == 1);
+    hc_data   = xData(dhi_table.ConcussLabel == 0);
+    
+    % calc effect size
+    ES = meanEffectSize(hc_data,mtbi_data,"Effect","robustcohen");    
+    
+    % store results
+    allVars{end+1,1} = varNames{vv};  
+    allES(end+1,1)   = ES.Effect;
+    allCI(end+1,1:2)   = ES.ConfidenceIntervals;
+end
+
+resultsTable3 = table(allVars, allES, allCI, ...
+    'VariableNames', {'Variable','EffectSize', 'CI'});
+
 varName = dhi_table.Properties.VariableNames;
 % Ask user to select X variable
 [xIdx, okX] = listdlg('PromptString','Select Variable for ttest (You can select Multiple):', ...
@@ -616,7 +637,7 @@ for xx = 1:length(xIdx)
     xData = subInfo.(xVar);
 
     [h,p,ci,stats] = ttest2(xData(dhi_table.ConcussLabel==0),xData(dhi_table.ConcussLabel==1));
-    if p < 0.05
+    if p < 0.05 && ~contains(xVar,'Intra') && ~contains(xVar,'intra')
         nexttile
         fprintf("Stats for variable: %s\n",xVar)
         fprintf("\t H: %d p: %d\n",h,p)

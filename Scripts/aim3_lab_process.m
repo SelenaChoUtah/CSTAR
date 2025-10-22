@@ -1,3 +1,22 @@
+
+%--------------------------------------------------------------------------
+% 
+% 
+%     Script for Aim 3 Lab Process
+% 
+%     This script pulls in the preprocess OPAL and BITTIUM data
+%     aka the motion and ECG data. The goal here is to pull in 
+%     the YOYO data, identify the transitions, and create the 
+%     HRRS responses similar to this paper:
+%         Combining 24-Hour Continuous Monitoring of Time-Locked Heart Rate, Physical Activity and Gait in Older Adults: Preliminary Findings
+%         https://www.mdpi.com/1424-8220/25/6/1945
+% 
+% 
+%     Created by Selena Cho
+%     Last Updated 10/22/2025
+% 
+%--------------------------------------------------------------------------
+
 cd('C:\Users\chose\Box\DHI-Lab\')
 addpath(genpath('CSTAR\'))
 
@@ -6,7 +25,7 @@ cd('D:\CSTAR')
 addpath(genpath('CSTAR\'))
 addpath(genpath('DHI_data\'))
 
-% Loading Lab Data
+%% Loading Lab Data
 currentFoldPath = cd;
 dataPath = dir(fullfile(currentFoldPath,'\DHI_data\PreprocessData\Lab\Bittium\'));
 
