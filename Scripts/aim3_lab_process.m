@@ -167,6 +167,17 @@ for ss = 1%:length(subID)
     end
 end
 
+%% HDBSCAN
+
+subID = fieldnames(taskData);
+for ss = 2%:length(subID)
+    for tt = 1:length(task)
+        ecg = taskData.(subID{ss}).(task{tt}).bittium.ecg;
+        fs = taskData.(subID{ss}).(task{tt}).bittium.fsEcg;
+        qrsData = detectQRS_pipeline(ecg, fs);
+    end
+end
+
 %% Summarizing Beat-to-Beat Heart Rate
 
 % identify QRS Complex
