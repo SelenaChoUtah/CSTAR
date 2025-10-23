@@ -142,7 +142,7 @@ HRsmooth = movmedian(HR,5);
 qrsData.peaks = likelyQRS.Index;
 qrsData.features = likelyQRS;
 qrsData.clusterLabel = clusterLabel;
-qrsData.RR = [NaN; RR];
+qrsData.RR = [NaN; RR];!
 qrsData.HR = [NaN; HR];
 qrsData.HRsmooth = [NaN; HRsmooth];
 
