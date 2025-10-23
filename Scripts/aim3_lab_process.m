@@ -55,12 +55,124 @@ for ss = 1:length(subID)
     end
 end
 
+%% Identify Transitions sit-stand-walk
+
+subID = fieldnames(taskData);
+figure
+for ss = 1%:length(subID)
+    for tt = 1:length(task)
+        Fs = 100;
+        Fs_n = Fs./2;
+        Fc = 1;
+
+        acc = taskData.(subID{ss}).(task{tt}).lumbar.acc;
+        gyro = taskData.(subID{ss}).(task{tt}).lumbar.gyro; 
+        [b,a] = butter(5,Fc/Fs_n);
+        filtAcc = filtfilt(b,a,acc);
+        filtGyro = filtfilt(b,a,gyro);
+
+        % Find transitions        
+        [pk, lk] = findpeaks(-filtAcc(:,3),'MinPeakProminence',std(filtAcc(:,3)),'MinPeakDistance',20*Fs); 
+        [b,a] = butter(4,10/Fs_n);
+        filtAcc = filtfilt(b,a,acc);
+
+        % Make the first marker the beginning of trial, vice versa with last marker.  
+        if (lk(1)/100) < 10
+            lk(1) = 1;
+        elseif (lk(1)/100) > 20
+            lk = [1; lk];  
+        end
+        
+        if (length(filtAcc)-(lk(end)))/100 > 25
+            lk = [lk;length(filtAcc)]; 
+        end
+
+        % fprintf("SubID: %s, Array: %1.0f, Time between last: %1.1f\n",string(subID{ss}),length(lk),(length(filtAcc)-(lk(end)))/100)        
+
+        % Take the locations and maybe do ENMO
+        enmo = sqrt(sum(filtAcc.^2, 2))-9.81;
+        meanENMO = [];
+        removeSeconds = 400;
+        for ii = 1:length(lk)-1
+            meanENMO(ii,1) = mean(enmo(lk(ii)+removeSeconds:lk(ii+1)-removeSeconds));
+        end
+
+        % nexttile        
+        % plot(filtAcc(:,3))
+        % hold on
+        % plot(lk,filtAcc(lk,3),'ro')
+        % ylim([0 25])
+        % yyaxis right
+        % plot(lk(1:end-1)+1500,meanENMO,'yo')
+
+
+        % Using Enmo values, walking is obvious
+        transitionData.(subID{ss}).(task{tt}).walking = [];
+        transitionData.(subID{ss}).(task{tt}).standing = [];
+        transitionData.(subID{ss}).(task{tt}).sitting = [];
+        
+        for mm = 1:length(meanENMO)
+            walkThresh = mean(meanENMO)+0.5*std(meanENMO);
+            % try
+            if meanENMO(mm) > walkThresh
+                % Mark the transition as walking
+                transitionData.(subID{ss}).(task{tt}).walking(end+1,:) = [lk(mm) lk(mm+1)];
+                transitionData.(subID{ss}).(task{tt}).standing(end+1,:) = [lk(mm-1) lk(mm)];
+                transitionData.(subID{ss}).(task{tt}).sitting(end+1,:) = [lk(mm-2) lk(mm-1)];                
+            end
+            % catch
+            % end
+        end
+
+        nexttile        
+        plot(filtAcc(:,3))
+        hold on
+
+        yl = ylim;                         % Current y-axis limits
+        walkPeriods = transitionData.(subID{ss}).(task{tt}).walking;
+        for i = 1:size(walkPeriods,1)
+            x1 = walkPeriods(i,1);
+            x2 = walkPeriods(i,2);
+            fill([x1 x2 x2 x1], [yl(1) yl(1) yl(2) yl(2)], ...
+                 [0.9 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none'); % shaded region
+        end
+        walkPeriods = transitionData.(subID{ss}).(task{tt}).sitting;
+        for i = 1:size(walkPeriods,1)
+            x1 = walkPeriods(i,1);
+            x2 = walkPeriods(i,2);
+            fill([x1 x2 x2 x1], [yl(1) yl(1) yl(2) yl(2)], ...
+                 [0.9 1 0.9], 'FaceAlpha', 0.5, 'EdgeColor', 'none'); % shaded region
+        end
+        walkPeriods = transitionData.(subID{ss}).(task{tt}).standing;
+        for i = 1:size(walkPeriods,1)
+            x1 = walkPeriods(i,1);
+            x2 = walkPeriods(i,2);
+            fill([x1 x2 x2 x1], [yl(1) yl(1) yl(2) yl(2)], ...
+                 [1 0.9 0.9], 'FaceAlpha', 0.5, 'EdgeColor', 'none'); % shaded region
+        end
+        plot(filtAcc(:,3))
+
+
+        % plot(lk,filtAcc(lk,3),'ro')
+        % ylim([0 25])
+        % yyaxis right
+        % plot(lk(1:end-1)+1500,meanENMO,'yo')
+
+
+        % hold on
+        % yyaxis right
+        % plot(filtGyro(:,2))
+        title(sprintf('Subject: %s', string(subID{ss})), 'Interpreter', 'none');
+
+    end
+end
+
 %% Summarizing Beat-to-Beat Heart Rate
 
 % identify QRS Complex
 subID = fieldnames(taskData);
 figure
-for ss = 2%1:length(subID)
+for ss = 1:4%1:length(subID)
     for tt = 1:length(task)
         recordName = subID{ss};
         folderName = 'DHI_data\PreprocessData\Lab\physionetFormat';
@@ -117,30 +229,3 @@ for s = 1:length(subjects)
     turnDatFile(recordName,fs,ecgData,folderName,folderVariable)
 end
 
-%% figure
-for i = 1:length(subjects)
-    figure
-    recordName = fullfile('physionetFormat',folderVariable,subjects{i},subjects{i});
-    [signal, ~, tm] = rdsamp(recordName);
-    N = length(signal);
-    ann = rdann(recordName,'wqrs',[],N);
-    buffaloTask.(subjects{i}).rrIntervals = ann;
-    fs = interest.(subjects{s}).(folderVariable).fs;
-    [heartRate, time] = rr2bpm(ann, fs);
-    buffaloTask.(subjects{i}).heartRate = heartRate;
-    buffaloTask.(subjects{i}).hrTime = time;
-
-    plot(tm,signal(:,1));hold on;grid on
-    plot(tm(ann),signal(ann,1),'ro')
-    % bpm = rr2bpm(diff(ann));
-    % plot(bpm)
-    % % Plot the heart rate
-    % plot(time/60,heartRate);
-    % % plot(time, heartRate, '-o');
-    % xlabel('Time (min)');
-    % ylabel('Heart Rate (beats per minute)');
-    % title(string(subjects{i}));
-    % axis tight
-    % grid on;
-    % ylim([60 200])
-end
